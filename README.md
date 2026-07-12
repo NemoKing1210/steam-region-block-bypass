@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.5.2-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores the product page when Steam shows **“This item is currently unavailable in your region”**.
 
@@ -86,6 +86,9 @@ Steam app page loads
        └── yes ──► Build target URL (?l= language, optional ?cc=)
                 │
                 ▼
+       Cache hit (within TTL)? ── yes ──► use stored guest HTML
+                │ no
+                ▼
        Optional: rewrite URL through proxy gateway
                 │
                 ▼
@@ -98,6 +101,7 @@ Steam app page loads
                 ├── still blocked? ──► show error + suggest proxy
                 │
                 └── clear Oops shell → inject layout + CSS + Steam JS + banner
+                    (successful HTML saved to cache)
 ```
 
 ### Anonymous fetch
@@ -207,6 +211,7 @@ Settings are stored in userscript storage (`srbb_settings`) via the header panel
 |---------|---------|-------------|
 | Bypass trigger | Auto | **Auto** runs on region-error pages; **Show button** waits for a manual offer |
 | Store country (`cc`) | empty | Optional Steam country code for guest requests |
+| Cache duration (minutes) | `60` | Reuse a successful guest page for this long; `0` disables cache. Banner **Reload** always fetches fresh |
 | Use proxy gateway | off | Route the anonymous fetch through a gateway |
 | Gateway mode | `gateway` | How the target URL is appended to `host:port` |
 | Host / Port | empty | Gateway address (e.g. `127.0.0.1` / `8765`) |

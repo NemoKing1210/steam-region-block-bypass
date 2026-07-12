@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-07-12
+
+### Added
+
+- Guest store HTML cache with configurable TTL (default 60 minutes; `0` disables); banner Reload always refetches
+
 ## [1.5.2] - 2026-07-12
 
 ### Fixed
@@ -74,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-bypass on blocked pages and Violentmonkey menu command for settings
 - Optional local HTTP gateway (`proxy-gateway.mjs`) for upstream HTTP/SOCKS proxies
 
+[1.6.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.6.0
 [1.5.1]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.5.1
 [1.5.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.5.0
 [1.4.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.4.0

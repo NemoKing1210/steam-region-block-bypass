@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.5.2
+// @version           1.6.0
 // @description       View Steam store pages blocked in your region by refetching without account cookies; optional proxy gateway
 // @description:ru    Показывает страницы магазина Steam, недоступные в регионе, повторным запросом без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 重新请求查看因区域限制不可用的 Steam 商店页面；可选代理网关
@@ -46,6 +46,11 @@
   'use strict';
 
   const STORAGE_KEY = 'srbb_settings';
+  const CACHE_STORAGE_KEY = 'srbb_page_cache';
+  /** Soft cap so GM storage does not grow without bound */
+  const CACHE_MAX_ENTRIES = 30;
+  /** Upper bound for the settings field (7 days) */
+  const CACHE_MINUTES_MAX = 10080;
   const DEFAULT_SETTINGS = {
     proxyEnabled: false,
     proxyHost: '',
@@ -56,6 +61,8 @@
     proxyMode: 'gateway',
     countryCode: '',
     autoBypass: true, // true = replace immediately; false = show button
+    /** Guest HTML TTL in minutes; 0 disables caching */
+    cacheMinutes: 60,
   };
 
   const SUPPORTED_LOCALES = ['en', 'ru', 'zh-CN', 'es', 'pt-BR', 'de', 'fr', 'ja', 'ko', 'pl'];
@@ -119,6 +126,7 @@
       bannerTitle: 'This game is unavailable in your region',
       bannerBody: 'Store page is shown via anonymous guest fetch (no account cookies)',
       viaProxy: 'via proxy gateway',
+      viaCache: 'from cache',
       reload: 'Reload',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -136,6 +144,9 @@
       bypassNow: 'Show store page',
       storeCountry: 'Store country (cc)',
       storeCountryHint: 'Optional Steam store country override for guest requests.',
+      cacheMinutes: 'Cache duration (minutes)',
+      cacheMinutesHint:
+        'How long to reuse a successful guest page before refetching. 0 disables cache. Reload always fetches fresh.',
       useProxy: 'Use proxy gateway',
       on: 'ON',
       off: 'OFF',
@@ -172,6 +183,7 @@
       bannerTitle: 'Эта игра недоступна в вашем регионе',
       bannerBody: 'Страница магазина показана через анонимный гостевой запрос (без cookies аккаунта)',
       viaProxy: 'через proxy gateway',
+      viaCache: 'из кеша',
       reload: 'Обновить',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -189,6 +201,9 @@
       bypassNow: 'Показать страницу магазина',
       storeCountry: 'Страна магазина (cc)',
       storeCountryHint: 'Необязательная подмена страны магазина Steam для гостевых запросов.',
+      cacheMinutes: 'Время кеша (минуты)',
+      cacheMinutesHint:
+        'Как долго повторно использовать успешно загруженную гостевую страницу. 0 отключает кеш. «Обновить» всегда запрашивает заново.',
       useProxy: 'Использовать proxy gateway',
       on: 'ВКЛ',
       off: 'ВЫКЛ',
@@ -222,6 +237,7 @@
       bannerTitle: '此游戏在您所在地区不可用',
       bannerBody: '商店页面通过匿名访客请求显示（无账号 Cookie）',
       viaProxy: '经由代理网关',
+      viaCache: '来自缓存',
       reload: '重新加载',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -238,6 +254,8 @@
       bypassNow: '显示商店页面',
       storeCountry: '商店国家/地区 (cc)',
       storeCountryHint: '可选：覆盖访客请求的 Steam 商店国家/地区。',
+      cacheMinutes: '缓存时长（分钟）',
+      cacheMinutesHint: '成功的访客页面在重新请求前可复用多久。0 禁用缓存。「重新加载」始终获取最新内容。',
       useProxy: '使用代理网关',
       on: '开',
       off: '关',
@@ -274,6 +292,7 @@
       bannerTitle: 'Este juego no está disponible en tu región',
       bannerBody: 'La página de la tienda se muestra mediante una petición anónima de invitado (sin cookies de cuenta)',
       viaProxy: 'vía proxy gateway',
+      viaCache: 'desde caché',
       reload: 'Recargar',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -291,6 +310,9 @@
       bypassNow: 'Mostrar página de la tienda',
       storeCountry: 'País de la tienda (cc)',
       storeCountryHint: 'Anulación opcional del país de la tienda Steam para peticiones de invitado.',
+      cacheMinutes: 'Duración de caché (minutos)',
+      cacheMinutesHint:
+        'Cuánto tiempo reutilizar una página de invitado correcta antes de volver a pedirla. 0 desactiva la caché. Recargar siempre obtiene datos frescos.',
       useProxy: 'Usar proxy gateway',
       on: 'ON',
       off: 'OFF',
@@ -327,6 +349,7 @@
       bannerTitle: 'Este jogo não está disponível na sua região',
       bannerBody: 'A página da loja é exibida via requisição anônima de convidado (sem cookies da conta)',
       viaProxy: 'via proxy gateway',
+      viaCache: 'do cache',
       reload: 'Recarregar',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -344,6 +367,9 @@
       bypassNow: 'Mostrar página da loja',
       storeCountry: 'País da loja (cc)',
       storeCountryHint: 'Substituição opcional do país da loja Steam para requisições de convidado.',
+      cacheMinutes: 'Duração do cache (minutos)',
+      cacheMinutesHint:
+        'Por quanto tempo reutilizar uma página de convidado bem-sucedida antes de buscar de novo. 0 desativa o cache. Recarregar sempre busca dados novos.',
       useProxy: 'Usar proxy gateway',
       on: 'ON',
       off: 'OFF',
@@ -380,6 +406,7 @@
       bannerTitle: 'Dieses Spiel ist in deiner Region nicht verfügbar',
       bannerBody: 'Die Store-Seite wird über einen anonymen Gastabruf angezeigt (ohne Account-Cookies)',
       viaProxy: 'über Proxy-Gateway',
+      viaCache: 'aus dem Cache',
       reload: 'Neu laden',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -397,6 +424,9 @@
       bypassNow: 'Store-Seite anzeigen',
       storeCountry: 'Store-Land (cc)',
       storeCountryHint: 'Optionale Überschreibung des Steam-Store-Lands für Gastanfragen.',
+      cacheMinutes: 'Cache-Dauer (Minuten)',
+      cacheMinutesHint:
+        'Wie lange eine erfolgreiche Gastseite wiederverwendet wird, bevor neu geladen wird. 0 deaktiviert den Cache. Neu laden holt immer frische Daten.',
       useProxy: 'Proxy-Gateway verwenden',
       on: 'AN',
       off: 'AUS',
@@ -433,6 +463,7 @@
       bannerTitle: "Ce jeu n'est pas disponible dans votre région",
       bannerBody: 'La page boutique est affichée via une requête anonyme invité (sans cookies de compte)',
       viaProxy: 'via proxy gateway',
+      viaCache: 'depuis le cache',
       reload: 'Recharger',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -450,6 +481,9 @@
       bypassNow: 'Afficher la page boutique',
       storeCountry: 'Pays de la boutique (cc)',
       storeCountryHint: 'Remplacement optionnel du pays de la boutique Steam pour les requêtes invité.',
+      cacheMinutes: 'Durée du cache (minutes)',
+      cacheMinutesHint:
+        'Combien de temps réutiliser une page invité réussie avant de la redemander. 0 désactive le cache. Recharger récupère toujours des données fraîches.',
       useProxy: 'Utiliser le proxy gateway',
       on: 'ON',
       off: 'OFF',
@@ -485,6 +519,7 @@
       bannerTitle: 'このゲームはお住まいの地域では利用できません',
       bannerBody: 'ストアページは匿名ゲスト取得で表示されています（アカウントCookieなし）',
       viaProxy: 'プロキシゲートウェイ経由',
+      viaCache: 'キャッシュから',
       reload: '再読み込み',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -502,6 +537,9 @@
       bypassNow: 'ストアページを表示',
       storeCountry: 'ストアの国 (cc)',
       storeCountryHint: 'ゲストリクエスト用のSteamストア国の任意上書き。',
+      cacheMinutes: 'キャッシュ時間（分）',
+      cacheMinutesHint:
+        '成功したゲストページを再取得するまでの保持時間。0でキャッシュ無効。「再読み込み」は常に最新を取得します。',
       useProxy: 'プロキシゲートウェイを使用',
       on: 'ON',
       off: 'OFF',
@@ -537,6 +575,7 @@
       bannerTitle: '이 게임은 해당 지역에서 이용할 수 없습니다',
       bannerBody: '스토어 페이지는 익명 게스트 요청으로 표시됩니다 (계정 쿠키 없음)',
       viaProxy: '프록시 게이트웨이 경유',
+      viaCache: '캐시에서',
       reload: '다시 불러오기',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -554,6 +593,9 @@
       bypassNow: '스토어 페이지 표시',
       storeCountry: '스토어 국가 (cc)',
       storeCountryHint: '게스트 요청용 Steam 스토어 국가 선택적 재정의.',
+      cacheMinutes: '캐시 유지 시간(분)',
+      cacheMinutesHint:
+        '성공한 게스트 페이지를 다시 요청하기 전까지 얼마나 재사용할지. 0이면 캐시 비활성. 「다시 불러오기」는 항상 새로 가져옵니다.',
       useProxy: '프록시 게이트웨이 사용',
       on: 'ON',
       off: 'OFF',
@@ -590,6 +632,7 @@
       bannerTitle: 'Ta gra jest niedostępna w Twoim regionie',
       bannerBody: 'Strona sklepu jest wyświetlana przez anonimowe pobranie gościa (bez cookies konta)',
       viaProxy: 'przez proxy gateway',
+      viaCache: 'z pamięci podręcznej',
       reload: 'Odśwież',
       btnTitle: 'Steam Region Bypass',
       btnText: 'Region Bypass',
@@ -607,6 +650,9 @@
       bypassNow: 'Pokaż stronę sklepu',
       storeCountry: 'Kraj sklepu (cc)',
       storeCountryHint: 'Opcjonalne nadpisanie kraju sklepu Steam dla zapytań gościa.',
+      cacheMinutes: 'Czas pamięci podręcznej (minuty)',
+      cacheMinutesHint:
+        'Jak długo ponownie używać udanej strony gościa przed ponownym pobraniem. 0 wyłącza cache. Odśwież zawsze pobiera świeże dane.',
       useProxy: 'Użyj proxy gateway',
       on: 'WŁ',
       off: 'WYŁ',
@@ -708,13 +754,95 @@
   function loadSettings() {
     const raw = GM_getValue(STORAGE_KEY, null);
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...raw };
+    const merged = { ...DEFAULT_SETTINGS, ...raw };
+    merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
+    return merged;
   }
 
   function saveSettings(next) {
     settings = { ...settings, ...next };
+    settings.cacheMinutes = normalizeCacheMinutes(settings.cacheMinutes);
     GM_setValue(STORAGE_KEY, settings);
     updateButtonState();
+  }
+
+  function normalizeCacheMinutes(value) {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.cacheMinutes;
+    return Math.min(n, CACHE_MINUTES_MAX);
+  }
+
+  function getCacheTtlMs() {
+    const minutes = normalizeCacheMinutes(settings.cacheMinutes);
+    return minutes > 0 ? minutes * 60 * 1000 : 0;
+  }
+
+  function buildCacheKey(targetUrl) {
+    const proxySig = settings.proxyEnabled
+      ? [settings.proxyMode || 'gateway', settings.proxyHost.trim(), String(settings.proxyPort || '').trim()].join('|')
+      : 'direct';
+    return `${targetUrl}\n${proxySig}`;
+  }
+
+  function loadCacheStore() {
+    const raw = GM_getValue(CACHE_STORAGE_KEY, null);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+    return raw;
+  }
+
+  function pruneCacheStore(store, ttlMs) {
+    const now = Date.now();
+    const entries = Object.entries(store).filter(([, entry]) => {
+      return (
+        entry &&
+        typeof entry === 'object' &&
+        typeof entry.html === 'string' &&
+        entry.html.length > 0 &&
+        typeof entry.savedAt === 'number' &&
+        (ttlMs <= 0 || now - entry.savedAt < ttlMs)
+      );
+    });
+    entries.sort((a, b) => b[1].savedAt - a[1].savedAt);
+    const next = {};
+    for (const [key, entry] of entries.slice(0, CACHE_MAX_ENTRIES)) {
+      next[key] = entry;
+    }
+    return next;
+  }
+
+  function readPageCache(targetUrl) {
+    const ttlMs = getCacheTtlMs();
+    if (ttlMs <= 0) return null;
+
+    const key = buildCacheKey(targetUrl);
+    let store = loadCacheStore();
+    const entry = store[key];
+    if (!entry || typeof entry.html !== 'string' || !entry.html) return null;
+
+    if (Date.now() - entry.savedAt >= ttlMs) {
+      delete store[key];
+      GM_setValue(CACHE_STORAGE_KEY, pruneCacheStore(store, ttlMs));
+      return null;
+    }
+    return entry.html;
+  }
+
+  function writePageCache(targetUrl, html) {
+    const ttlMs = getCacheTtlMs();
+    if (ttlMs <= 0 || !html) return;
+
+    const key = buildCacheKey(targetUrl);
+    const store = loadCacheStore();
+    store[key] = { html, savedAt: Date.now() };
+    GM_setValue(CACHE_STORAGE_KEY, pruneCacheStore(store, ttlMs));
+  }
+
+  function invalidatePageCache(targetUrl) {
+    const key = buildCacheKey(targetUrl);
+    const store = loadCacheStore();
+    if (!(key in store)) return;
+    delete store[key];
+    GM_setValue(CACHE_STORAGE_KEY, store);
   }
 
   function isRegionBlockedPage(root = document) {
@@ -831,7 +959,8 @@
     });
   }
 
-  async function bypassRegionBlock() {
+  async function bypassRegionBlock(options = {}) {
+    const forceRefresh = !!options.forceRefresh;
     const mount = getContentMount();
     if (!mount) return;
 
@@ -839,17 +968,31 @@
 
     try {
       const targetUrl = buildTargetUrl();
-      const requestUrl = buildRequestUrl(targetUrl);
-      const response = await gmRequest(requestUrl);
+      let html = null;
+      let fromCache = false;
 
-      if (response.status < 200 || response.status >= 400) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!forceRefresh) {
+        html = readPageCache(targetUrl);
+        fromCache = !!html;
+      } else {
+        invalidatePageCache(targetUrl);
       }
 
-      const html = response.responseText || '';
+      if (!html) {
+        const requestUrl = buildRequestUrl(targetUrl);
+        const response = await gmRequest(requestUrl);
+
+        if (response.status < 200 || response.status >= 400) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        html = response.responseText || '';
+      }
+
       const doc = new DOMParser().parseFromString(html, 'text/html');
 
       if (isRegionBlockedPage(doc)) {
+        if (fromCache) invalidatePageCache(targetUrl);
         showStatus(
           mount,
           'error',
@@ -859,17 +1002,23 @@
       }
 
       if (doc.querySelector('#agecheck_form, .agegate_birthday_desc, #app_agegate')) {
+        if (fromCache) invalidatePageCache(targetUrl);
         showStatus(mount, 'error', t('ageGate'));
         return;
       }
 
       const remoteGame = extractGamePageRoot(doc);
       if (!remoteGame) {
+        if (fromCache) invalidatePageCache(targetUrl);
         showStatus(mount, 'error', t('noContent'));
         return;
       }
 
-      await injectDirect(remoteGame, doc, targetUrl);
+      if (!fromCache) {
+        writePageCache(targetUrl, html);
+      }
+
+      await injectDirect(remoteGame, doc, targetUrl, { fromCache });
       hideLoaderOverlay();
     } catch (err) {
       showStatus(
@@ -938,12 +1087,13 @@
     }
   }
 
-  function createBanner() {
+  function createBanner(options = {}) {
     const banner = document.createElement('div');
     banner.className = 'srbb-banner';
     const details = [
       escapeHtml(t('bannerBody')),
       settings.proxyEnabled ? escapeHtml(t('viaProxy')) : '',
+      options.fromCache ? escapeHtml(t('viaCache')) : '',
       settings.countryCode ? `cc=${settings.countryCode.toUpperCase()}` : '',
     ]
       .filter(Boolean)
@@ -970,7 +1120,9 @@
         <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="reload">${escapeHtml(t('reload'))}</button>
       </div>
     `;
-    banner.querySelector('[data-srbb="reload"]')?.addEventListener('click', () => bypassRegionBlock());
+    banner.querySelector('[data-srbb="reload"]')?.addEventListener('click', () =>
+      bypassRegionBlock({ forceRefresh: true })
+    );
     return banner;
   }
 
@@ -1337,7 +1489,7 @@
     return codes;
   }
 
-  async function injectDirect(remoteGame, remoteDoc, sourceUrl) {
+  async function injectDirect(remoteGame, remoteDoc, sourceUrl, options = {}) {
     const template = getContentMount();
     clearErrorPageContent(template);
     applyAppBodyClasses();
@@ -1374,7 +1526,7 @@
     wrapper.querySelectorAll('script, .alike_sub, #ag_changes_button, .ag_changes').forEach((el) => el.remove());
     absolutizeUrls(wrapper);
     stripGuestQueueSignInPrompt(wrapper);
-    insertBannerIntoTabletGrid(wrapper, createBanner());
+    insertBannerIntoTabletGrid(wrapper, createBanner({ fromCache: !!options.fromCache }));
 
     shell.appendChild(wrapper);
     template.appendChild(shell);
@@ -1601,6 +1753,14 @@
         <p class="srbb-hint">${escapeHtml(t('storeCountryHint'))}</p>
       </div>
 
+      <div class="srbb-panel__section">
+        <label class="srbb-field">
+          <span class="srbb-field__label">${escapeHtml(t('cacheMinutes'))}</span>
+          <input type="number" id="srbb-cache-minutes" min="0" max="${CACHE_MINUTES_MAX}" step="1" placeholder="60" inputmode="numeric" />
+        </label>
+        <p class="srbb-hint">${escapeHtml(t('cacheMinutesHint'))}</p>
+      </div>
+
       <div class="srbb-panel__divider"></div>
 
       <div class="srbb-panel__section srbb-panel__section--row">
@@ -1666,7 +1826,7 @@
       persistPanelForm();
       togglePanel(false);
       if (isRegionBlockedPage() || document.querySelector('.srbb-shell, .srbb-injected')) {
-        bypassRegionBlock();
+        bypassRegionBlock({ forceRefresh: true });
       } else {
         location.reload();
       }
@@ -1691,6 +1851,9 @@
     if (!panel) return;
     panel.querySelector('#srbb-auto').value = settings.autoBypass ? 'auto' : 'button';
     panel.querySelector('#srbb-cc').value = settings.countryCode || '';
+    panel.querySelector('#srbb-cache-minutes').value = String(
+      normalizeCacheMinutes(settings.cacheMinutes)
+    );
     panel.querySelector('#srbb-proxy-enabled').checked = !!settings.proxyEnabled;
     panel.querySelector('#srbb-proxy-mode').value = settings.proxyMode || 'gateway';
     panel.querySelector('#srbb-proxy-host').value = settings.proxyHost || '';
@@ -1706,6 +1869,7 @@
     saveSettings({
       autoBypass: panel.querySelector('#srbb-auto').value !== 'button',
       countryCode: panel.querySelector('#srbb-cc').value.trim().toUpperCase(),
+      cacheMinutes: normalizeCacheMinutes(panel.querySelector('#srbb-cache-minutes').value),
       proxyEnabled: panel.querySelector('#srbb-proxy-enabled').checked,
       proxyMode: panel.querySelector('#srbb-proxy-mode').value,
       proxyHost: panel.querySelector('#srbb-proxy-host').value.trim(),

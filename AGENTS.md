@@ -43,6 +43,7 @@ UI: Steam-styled button in `#global_actions`, panel `#srbb-panel`, CSS via `GM_a
 - Keep the userscript self-contained (no npm imports inside `.user.js`).
 - Direct DOM inject only — do not reintroduce iframe/blob insert mode unless explicitly requested.
 - Guest requests must stay **anonymous** (no session cookies). Only age-gate / language / optional country cookies in the Cookie header.
+- Page HTML cache lives in `srbb_page_cache` (TTL from `settings.cacheMinutes`, default 60; `0` disables). Banner Reload / Save & Reload force a fresh fetch.
 - When adding UI strings: update **all** locales in the `I18N` / `MESSAGES` map and keep `@name` / `@description` locale tags aligned when user-facing metadata changes.
 - Supported UI locales: `en`, `ru`, `zh-CN`, `es`, `pt-BR`, `de`, `fr`, `ja`, `ko`, `pl`. Steam language maps live in `STEAM_LANG_BY_LOCALE` / `ACCEPT_LANG_BY_STEAM`.
 - Gateway: ESM Node, `undici` for upstream HTTP/SOCKS. Do not expand it into a general-purpose proxy product unless asked.
