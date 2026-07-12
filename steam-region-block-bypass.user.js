@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.16.6
+// @version           1.16.8
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -45,6 +45,7 @@
 (function () {
   'use strict';
 
+  const REPO_URL = 'https://github.com/NemoKing1210/steam-region-block-bypass';
   const STORAGE_KEY = 'srbb_settings';
   const CACHE_STORAGE_KEY = 'srbb_page_cache';
   const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';
@@ -196,6 +197,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region blocked',
+      suggestStatAvailable: 'Available {count}',
+      suggestStatBlocked: 'Blocked {count}',
       rememberBlockedApps: 'Remember blocked games',
       rememberBlockedAppsHint:
         'When Steam shows a region error on an app page, save its ID locally for guest-search highlights.',
@@ -238,6 +241,8 @@
       cancel: 'Cancel',
       save: 'Save',
       saveReload: 'Save & Reload page',
+      repoLink: 'GitHub',
+      repoAbout: 'Source code, updates, and issue reports',
     },
     ru: {
       menuSettings: 'Steam Region Bypass — Настройки',
@@ -309,6 +314,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Регион заблокирован',
+      suggestStatAvailable: 'Доступно {count}',
+      suggestStatBlocked: 'Заблокировано {count}',
       rememberBlockedApps: 'Запоминать заблокированные игры',
       rememberBlockedAppsHint:
         'При ошибке региона на странице приложения сохранять её ID локально для подсветки в гостевом поиске.',
@@ -351,6 +358,8 @@
       cancel: 'Отмена',
       save: 'Сохранить',
       saveReload: 'Сохранить и перезагрузить',
+      repoLink: 'GitHub',
+      repoAbout: 'Исходный код, обновления и сообщения об ошибках',
     },
     'zh-CN': {
       menuSettings: 'Steam Region Bypass — 设置',
@@ -414,6 +423,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地区限制',
+      suggestStatAvailable: '可用 {count}',
+      suggestStatBlocked: '受限 {count}',
       rememberBlockedApps: '记住被封锁的游戏',
       rememberBlockedAppsHint: '当 Steam 在应用页显示区域错误时，本地保存其 ID，以便在访客搜索中高亮。',
       markBlockedInSearch: '在搜索中高亮',
@@ -455,6 +466,8 @@
       cancel: '取消',
       save: '保存',
       saveReload: '保存并刷新页面',
+      repoLink: 'GitHub',
+      repoAbout: '源代码、更新与问题反馈',
     },
     es: {
       menuSettings: 'Steam Region Bypass — Ajustes',
@@ -526,6 +539,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Región bloqueada',
+      suggestStatAvailable: 'Disponibles {count}',
+      suggestStatBlocked: 'Bloqueados {count}',
       rememberBlockedApps: 'Recordar juegos bloqueados',
       rememberBlockedAppsHint:
         'Si Steam muestra un error regional en una app, guarda su ID localmente para resaltarla en la búsqueda invitado.',
@@ -568,6 +583,8 @@
       cancel: 'Cancelar',
       save: 'Guardar',
       saveReload: 'Guardar y recargar',
+      repoLink: 'GitHub',
+      repoAbout: 'Código fuente, actualizaciones e informes de errores',
     },
     'pt-BR': {
       menuSettings: 'Steam Region Bypass — Configurações',
@@ -639,6 +656,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Região bloqueada',
+      suggestStatAvailable: 'Disponíveis {count}',
+      suggestStatBlocked: 'Bloqueados {count}',
       rememberBlockedApps: 'Lembrar jogos bloqueados',
       rememberBlockedAppsHint:
         'Quando a Steam mostrar erro regional numa app, salva o ID localmente para destacar na busca convidado.',
@@ -681,6 +700,8 @@
       cancel: 'Cancelar',
       save: 'Salvar',
       saveReload: 'Salvar e recarregar',
+      repoLink: 'GitHub',
+      repoAbout: 'Código-fonte, atualizações e relatos de problemas',
     },
     de: {
       menuSettings: 'Steam Region Bypass — Einstellungen',
@@ -752,6 +773,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region gesperrt',
+      suggestStatAvailable: 'Verfügbar {count}',
+      suggestStatBlocked: 'Gesperrt {count}',
       rememberBlockedApps: 'Gesperrte Spiele merken',
       rememberBlockedAppsHint:
         'Wenn Steam auf einer App-Seite einen Regionsfehler zeigt, ID lokal speichern für Hervorhebung in der Gast-Suche.',
@@ -794,6 +817,8 @@
       cancel: 'Abbrechen',
       save: 'Speichern',
       saveReload: 'Speichern & Seite neu laden',
+      repoLink: 'GitHub',
+      repoAbout: 'Quellcode, Updates und Fehlerberichte',
     },
     fr: {
       menuSettings: 'Steam Region Bypass — Paramètres',
@@ -865,6 +890,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Région bloquée',
+      suggestStatAvailable: 'Disponibles {count}',
+      suggestStatBlocked: 'Bloqués {count}',
       rememberBlockedApps: 'Mémoriser les jeux bloqués',
       rememberBlockedAppsHint:
         'Quand Steam affiche une erreur régionale sur une app, enregistrer son ID localement pour la recherche invité.',
@@ -907,6 +934,8 @@
       cancel: 'Annuler',
       save: 'Enregistrer',
       saveReload: 'Enregistrer et recharger',
+      repoLink: 'GitHub',
+      repoAbout: 'Code source, mises à jour et signalements',
     },
     ja: {
       menuSettings: 'Steam Region Bypass — 設定',
@@ -977,6 +1006,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地域制限',
+      suggestStatAvailable: '利用可 {count}',
+      suggestStatBlocked: '制限 {count}',
       rememberBlockedApps: 'ブロックされたゲームを記憶',
       rememberBlockedAppsHint: 'アプリページで地域エラーが出たとき、IDをローカル保存しゲスト検索で強調表示します。',
       markBlockedInSearch: '検索で強調',
@@ -1018,6 +1049,8 @@
       cancel: 'キャンセル',
       save: '保存',
       saveReload: '保存して再読み込み',
+      repoLink: 'GitHub',
+      repoAbout: 'ソースコード・更新・不具合報告',
     },
     ko: {
       menuSettings: 'Steam Region Bypass — 설정',
@@ -1088,6 +1121,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '지역 제한',
+      suggestStatAvailable: '이용 가능 {count}',
+      suggestStatBlocked: '차단됨 {count}',
       rememberBlockedApps: '차단된 게임 기억',
       rememberBlockedAppsHint: '앱 페이지에서 지역 오류가 나오면 ID를 로컬에 저장해 게스트 검색에서 강조합니다.',
       markBlockedInSearch: '검색에서 강조',
@@ -1129,6 +1164,8 @@
       cancel: '취소',
       save: '저장',
       saveReload: '저장 후 새로고침',
+      repoLink: 'GitHub',
+      repoAbout: '소스 코드, 업데이트 및 문제 제보',
     },
     pl: {
       menuSettings: 'Steam Region Bypass — Ustawienia',
@@ -1200,6 +1237,8 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region zablokowany',
+      suggestStatAvailable: 'Dostępne {count}',
+      suggestStatBlocked: 'Zablokowane {count}',
       rememberBlockedApps: 'Zapamiętuj zablokowane gry',
       rememberBlockedAppsHint:
         'Gdy Steam pokaże błąd regionu na stronie aplikacji, zapisz ID lokalnie do podświetlenia w wyszukiwaniu gościa.',
@@ -1242,6 +1281,8 @@
       cancel: 'Anuluj',
       save: 'Zapisz',
       saveReload: 'Zapisz i odśwież stronę',
+      repoLink: 'GitHub',
+      repoAbout: 'Kod źródłowy, aktualizacje i zgłoszenia błędów',
     },
   };
 
@@ -2771,6 +2812,10 @@
         <div class="srbb-suggest__probe-track"><div class="srbb-suggest__probe-fill" id="srbb-suggest-probe-fill"></div></div>
         <div class="srbb-suggest__probe-label" id="srbb-suggest-probe-label"></div>
       </div>
+      <div class="srbb-suggest__stats" id="srbb-suggest-stats" hidden>
+        <span class="srbb-suggest__stat srbb-suggest__stat--available" id="srbb-suggest-stat-available"></span>
+        <span class="srbb-suggest__stat srbb-suggest__stat--blocked" id="srbb-suggest-stat-blocked"></span>
+      </div>
     `;
     mount.appendChild(panel);
 
@@ -2793,6 +2838,45 @@
       togglePanel(true);
       switchPanelTab('search');
     });
+  }
+
+  function hideSuggestStats() {
+    const stats = document.getElementById('srbb-suggest-stats');
+    if (stats) stats.hidden = true;
+  }
+
+  function setSuggestStats(available, blocked) {
+    const stats = document.getElementById('srbb-suggest-stats');
+    const availableEl = document.getElementById('srbb-suggest-stat-available');
+    const blockedEl = document.getElementById('srbb-suggest-stat-blocked');
+    if (!stats || !availableEl || !blockedEl) return;
+    availableEl.textContent = t('suggestStatAvailable', { count: available });
+    blockedEl.textContent = t('suggestStatBlocked', { count: blocked });
+    stats.hidden = false;
+  }
+
+  function updateSuggestStats(items) {
+    if (!items || !items.length) {
+      hideSuggestStats();
+      return;
+    }
+    let blocked = 0;
+    for (const item of items) {
+      if (item.regionBlocked || isBlockedApp(item.id)) blocked += 1;
+    }
+    setSuggestStats(items.length - blocked, blocked);
+  }
+
+  function refreshSuggestStatsFromDom() {
+    const panel = document.getElementById('srbb-suggest');
+    if (!panel) return;
+    const rows = [...panel.querySelectorAll('.srbb-suggest__item')];
+    if (!rows.length) {
+      hideSuggestStats();
+      return;
+    }
+    const blocked = rows.filter((el) => el.classList.contains('srbb-suggest__item--blocked')).length;
+    setSuggestStats(rows.length - blocked, blocked);
   }
 
   function updateSuggestProbeProgress(progress) {
@@ -2861,6 +2945,15 @@
       badge.textContent = t('suggestRegionBlocked');
       titleRow.appendChild(badge);
     }
+    const id = String(appId);
+    if (lastSuggestItems.length) {
+      lastSuggestItems = lastSuggestItems.map((item) =>
+        String(item.id) === id ? { ...item, regionBlocked: true } : item
+      );
+      updateSuggestStats(lastSuggestItems);
+    } else {
+      refreshSuggestStatsFromDom();
+    }
   }
 
   async function probeSuggestBlocked(items, token) {
@@ -2900,6 +2993,7 @@
         ...item,
         regionBlocked: isBlockedApp(item.id),
       }));
+      updateSuggestStats(lastSuggestItems);
     }
   }
 
@@ -3681,6 +3775,7 @@
       });
     });
 
+    updateSuggestStats(items);
     showSuggestDropdown();
   }
 
@@ -3708,6 +3803,7 @@
     inner.innerHTML = rows;
     panel.setAttribute('aria-busy', 'true');
     panel.setAttribute('aria-label', t('suggestLoading'));
+    hideSuggestStats();
     showSuggestDropdown();
   }
 
@@ -3720,6 +3816,7 @@
     panel.removeAttribute('aria-busy');
     panel.removeAttribute('aria-label');
     inner.innerHTML = `<div class="srbb-suggest__message">${escapeHtml(message)}</div>`;
+    hideSuggestStats();
     showSuggestDropdown();
   }
 
@@ -4640,9 +4737,16 @@
       </div>
 
       <div class="srbb-panel__footer">
-        <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="close">${escapeHtml(t('cancel'))}</button>
-        <button type="button" class="srbb-btn" data-srbb="save">${escapeHtml(t('save'))}</button>
-        <button type="button" class="srbb-btn srbb-btn--green" data-srbb="save-run" id="srbb-save-run">${escapeHtml(t('saveReload'))}</button>
+        <div class="srbb-panel__footer-actions">
+          <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="close">${escapeHtml(t('cancel'))}</button>
+          <button type="button" class="srbb-btn" data-srbb="save">${escapeHtml(t('save'))}</button>
+          <button type="button" class="srbb-btn srbb-btn--green" data-srbb="save-run" id="srbb-save-run">${escapeHtml(t('saveReload'))}</button>
+        </div>
+        <div class="srbb-panel__footer-divider" role="separator"></div>
+        <a class="srbb-panel__repo" href="${REPO_URL}" target="_blank" rel="noopener noreferrer">
+          <span class="srbb-panel__repo-title">${escapeHtml(t('repoLink'))}</span>
+          <span class="srbb-panel__repo-desc">${escapeHtml(t('repoAbout'))}</span>
+        </a>
       </div>
     `;
     document.body.appendChild(panel);
@@ -5147,13 +5251,47 @@
       }
       .srbb-panel__footer {
         display: flex;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-        gap: 8px;
+        flex-direction: column;
+        gap: 10px;
         padding: 12px 14px 14px;
         border-top: 1px solid #000;
         background: rgba(0,0,0,.2);
         flex-shrink: 0;
+      }
+      .srbb-panel__footer-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .srbb-panel__footer-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(90deg, transparent, #000, transparent);
+      }
+      .srbb-panel__repo {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        color: #8f98a0;
+        text-decoration: none;
+      }
+      .srbb-panel__repo:hover {
+        color: #c7d5e0;
+      }
+      .srbb-panel__repo:hover .srbb-panel__repo-title {
+        color: #66c0f4;
+      }
+      .srbb-panel__repo-title {
+        color: #67c1f5;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .srbb-panel__repo-desc {
+        font-size: 11px;
+        line-height: 1.3;
       }
 
       .srbb-field {
@@ -5580,6 +5718,36 @@
       .srbb-suggest__probe-label {
         color: #8f98a0;
         font-size: 11px;
+      }
+      .srbb-suggest__stats {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 10px;
+        border-top: 1px solid rgba(0,0,0,.55);
+        background: rgba(0,0,0,.22);
+      }
+      .srbb-suggest__stats[hidden] {
+        display: none !important;
+      }
+      .srbb-suggest__stat {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 7px;
+        border-radius: 2px;
+        border: 1px solid #000;
+        font: 700 10px/1.2 "Motiva Sans", Arial, Helvetica, sans-serif;
+        letter-spacing: .03em;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      }
+      .srbb-suggest__stat--available {
+        background: linear-gradient(to bottom, #a4d007, #536904);
+        color: #fff;
+      }
+      .srbb-suggest__stat--blocked {
+        background: linear-gradient(to bottom, #a94847, #6b2a2a);
+        color: #ffc9c9;
       }
       .srbb-suggest__name {
         color: #fff;

@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.8] - 2026-07-13
+
+### Added
+
+- Guest search suggestions footer badges for available vs blocked game counts (updates live during auto-detect)
+
+## [1.16.7] - 2026-07-13
+
+### Added
+
+- Settings panel footer link to the GitHub repository (GameStatus-style title + description under the action buttons)
+
 ## [1.16.6] - 2026-07-13
 
 ### Fixed
