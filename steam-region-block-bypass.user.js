@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.16.3
+// @version           1.16.6
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -1333,6 +1333,14 @@
   let searchPageDebounceTimer = null;
   /** href last successfully loaded by guest /search inject (avoids MutationObserver reload loops) */
   let searchPageLoadedHref = '';
+  /** start offset last loaded by guest /search (Steam paginates via start, not only href) */
+  let searchPageLoadedStart = -1;
+  /** True while loadGuestSearchPage is in flight (skip AJAX-pagination observers) */
+  let searchPageLoading = false;
+  /** location.href + app ids currently decorated/probed */
+  let searchResultsFingerprint = '';
+  let searchResultsRefreshTimer = null;
+  let searchResultsObserverHooked = false;
   let historyHooked = false;
   /** @type {Set<string> | null} */
   let blockedAppsIndex = null;
@@ -1408,6 +1416,7 @@
       syncSearchPanelToggle();
       if (settings.searchPageUnblocked && isSearchPage()) {
         searchPageLoadedHref = '';
+        searchPageLoadedStart = -1;
         scheduleGuestSearchReload({ immediate: true });
       }
     }
@@ -1649,6 +1658,50 @@
     return `<span class="srbb-suggest__blocked-badge">${escapeHtml(t('suggestRegionBlocked'))}</span>`;
   }
 
+  /** Steam search page size (usually 25). */
+  function getSearchPageSize(sourceUrl = location.href) {
+    try {
+      const count = parseInt(new URL(sourceUrl, location.origin).searchParams.get('count') || '', 10);
+      if (Number.isFinite(count) && count > 0 && count <= 100) return count;
+    } catch {
+      /* ignore */
+    }
+    return 25;
+  }
+
+  /** Current page number from pagination UI (1-based), if present. */
+  function getActiveSearchPageFromDom() {
+    const pag = document.querySelector('.search_pagination_right');
+    if (!pag) return null;
+    for (const el of pag.children) {
+      if (el.tagName !== 'SPAN') continue;
+      const n = parseInt(String(el.textContent || '').trim(), 10);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return null;
+  }
+
+  /**
+   * Steam AJAX search uses `start`/`count`. Browser URL often only has `page=N`,
+   * which the store HTML endpoint ignores — always derive a real offset.
+   */
+  function getSearchStartOffset(sourceUrl = location.href) {
+    try {
+      const url = new URL(sourceUrl, location.origin);
+      const start = parseInt(url.searchParams.get('start') || '', 10);
+      if (Number.isFinite(start) && start >= 0) return start;
+      const page = parseInt(url.searchParams.get('page') || '', 10);
+      if (Number.isFinite(page) && page >= 1) {
+        return (page - 1) * getSearchPageSize(sourceUrl);
+      }
+    } catch {
+      /* ignore */
+    }
+    const domPage = getActiveSearchPageFromDom();
+    if (domPage && domPage >= 1) return (domPage - 1) * getSearchPageSize(sourceUrl);
+    return 0;
+  }
+
   function buildTargetUrl(sourceUrl = location.href) {
     const url = new URL(sourceUrl);
     url.searchParams.delete('snr');
@@ -1659,6 +1712,17 @@
     }
     if (/\/search\/?/i.test(url.pathname)) {
       url.searchParams.set('ignore_preferences', '1');
+      const count = getSearchPageSize(url.toString());
+      const start = getSearchStartOffset(url.toString());
+      url.searchParams.set('count', String(count));
+      if (start > 0) {
+        url.searchParams.set('start', String(start));
+        url.searchParams.set('page', String(Math.floor(start / count) + 1));
+      } else {
+        url.searchParams.delete('start');
+        // Keep explicit page=1 out of the request — Steam treats missing as first page
+        if (url.searchParams.get('page') === '1') url.searchParams.delete('page');
+      }
     }
     return url.toString();
   }
@@ -2632,9 +2696,14 @@
   function initSearchUnblocked() {
     observeSearchHeader();
     hookHistoryForSearch();
+    observeSearchResultsChanges();
     syncSearchGuestMode();
-    if (settings.searchPageUnblocked && isSearchPage()) {
-      scheduleGuestSearchReload();
+    if (isSearchPage()) {
+      if (settings.searchPageUnblocked) {
+        scheduleGuestSearchReload();
+      } else {
+        scheduleSearchResultsRefresh({ immediate: true });
+      }
     }
   }
 
@@ -2898,6 +2967,9 @@
       if (hadGuestPage) {
         searchPageToken += 1;
         searchPageLoadedHref = '';
+        searchPageLoadedStart = -1;
+        searchResultsFingerprint = '';
+        searchPageLoading = false;
         if (searchPageDebounceTimer) {
           window.clearTimeout(searchPageDebounceTimer);
           searchPageDebounceTimer = null;
@@ -3729,22 +3801,149 @@
     if (historyHooked) return;
     historyHooked = true;
 
+    const onUrlChange = () => {
+      if (!isSearchPage()) return;
+      if (settings.searchPageUnblocked) {
+        scheduleGuestSearchReload();
+      } else {
+        scheduleSearchResultsRefresh();
+      }
+    };
+
     const wrap = (fn) =>
       function (...args) {
         const ret = fn.apply(this, args);
-        scheduleGuestSearchReload();
+        onUrlChange();
         return ret;
       };
 
     history.pushState = wrap(history.pushState);
     history.replaceState = wrap(history.replaceState);
-    window.addEventListener('popstate', scheduleGuestSearchReload);
+    window.addEventListener('popstate', onUrlChange);
+  }
+
+  function getSearchResultsFingerprint() {
+    const ids = collectSearchResultApps(document)
+      .map((app) => app.id)
+      .join(',');
+    return `${location.href}#${ids}`;
+  }
+
+  function observeSearchResultsChanges() {
+    if (searchResultsObserverHooked) return;
+    searchResultsObserverHooked = true;
+
+    const isSearchResultsMutation = (mutation) => {
+      const target = mutation.target;
+      if (!(target instanceof Element)) return false;
+      if (
+        target.id === 'search_resultsRows' ||
+        target.id === 'search_result_container' ||
+        target.id === 'search_results' ||
+        target.classList?.contains('search_pagination') ||
+        target.closest?.(
+          '#search_resultsRows, #search_result_container, #search_results, .search_pagination'
+        )
+      ) {
+        return true;
+      }
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element)) continue;
+        if (
+          node.id === 'search_resultsRows' ||
+          node.id === 'search_result_container' ||
+          node.classList?.contains('search_result_row') ||
+          node.classList?.contains('search_pagination') ||
+          node.querySelector?.(
+            '#search_resultsRows, .search_result_row, .search_pagination'
+          )
+        ) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      if (!isSearchPage() || searchPageLoading) return;
+      if (!mutations.some(isSearchResultsMutation)) return;
+      scheduleSearchResultsRefresh();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  function scheduleSearchResultsRefresh(options = {}) {
+    if (!isSearchPage()) return;
+    if (searchResultsRefreshTimer) window.clearTimeout(searchResultsRefreshTimer);
+    searchResultsRefreshTimer = window.setTimeout(() => {
+      searchResultsRefreshTimer = null;
+      refreshSearchResultsBlockedState();
+    }, options.immediate ? 0 : 280);
+  }
+
+  function refreshSearchResultsBlockedState() {
+    if (!isSearchPage() || searchPageLoading) return;
+
+    // Steam AJAX pagination updates the URL and/or replaces result rows without a full reload.
+    // Prefer a guest refetch when that mode is on and the page offset moved.
+    if (settings.searchPageUnblocked) {
+      const start = getSearchStartOffset();
+      if (location.href !== searchPageLoadedHref || start !== searchPageLoadedStart) {
+        scheduleGuestSearchReload();
+        return;
+      }
+    }
+
+    const fingerprint = getSearchResultsFingerprint();
+    if (fingerprint === searchResultsFingerprint) return;
+    searchResultsFingerprint = fingerprint;
+
+    decorateBlockedSearchResults();
+    if (shouldProbeBlockedScope('search')) {
+      const token = ++searchPageToken;
+      void probeSearchPageBlocked(token);
+    }
+  }
+
+  /**
+   * Guest /search fetch URL. Uses the full store search page with an explicit
+   * `start`/`count` offset (Steam's `page=` alone is not enough).
+   */
+  function buildGuestSearchFetchUrl(sourceUrl = location.href) {
+    return buildTargetUrl(sourceUrl);
+  }
+
+  /**
+   * `/search/results?infinite=1` returns JSON `{ results_html }`; full `/search`
+   * returns a normal HTML document. Normalize both to parseable HTML.
+   */
+  function normalizeGuestSearchHtml(responseText) {
+    const raw = String(responseText || '');
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('{')) {
+      try {
+        const data = JSON.parse(trimmed);
+        if (data && typeof data.results_html === 'string') {
+          return `<div id="search_results"><div id="search_resultsRows">${data.results_html}</div></div>`;
+        }
+      } catch {
+        /* fall through — treat as HTML */
+      }
+    }
+    return raw;
   }
 
   function scheduleGuestSearchReload(options = {}) {
     if (!settings.searchPageUnblocked || !isSearchPage()) return;
     const forceRefresh = !!options.forceRefresh;
-    if (!forceRefresh && location.href === searchPageLoadedHref) return;
+    const start = getSearchStartOffset();
+    if (
+      !forceRefresh &&
+      location.href === searchPageLoadedHref &&
+      start === searchPageLoadedStart
+    ) {
+      return;
+    }
     if (searchPageDebounceTimer) window.clearTimeout(searchPageDebounceTimer);
     searchPageDebounceTimer = window.setTimeout(() => {
       loadGuestSearchPage(options);
@@ -3813,6 +4012,9 @@
   }
 
   async function injectHiddenSearchHits(token) {
+    // storesearch only covers the first page — don't mix those hits into page 2+
+    if (getSearchStartOffset() > 0) return;
+
     const term = getSearchTermFromLocation().trim();
     if (!term) return;
 
@@ -4100,10 +4302,17 @@
     if (!settings.searchPageUnblocked || !isSearchPage()) return;
 
     const forceRefresh = !!options.forceRefresh;
-    if (forceRefresh) searchPageLoadedHref = '';
+    if (forceRefresh) {
+      searchPageLoadedHref = '';
+      searchPageLoadedStart = -1;
+    }
     const token = ++searchPageToken;
+    searchPageLoading = true;
     const mount = findLiveSearchResultsRoot() || getContentMount();
-    if (!mount) return;
+    if (!mount) {
+      if (token === searchPageToken) searchPageLoading = false;
+      return;
+    }
 
     ensureSearchBanner(mount.parentElement || mount);
 
@@ -4111,7 +4320,8 @@
     showSearchPageSkeleton(liveRoot);
 
     try {
-      const targetUrl = buildTargetUrl();
+      const targetUrl = buildGuestSearchFetchUrl();
+      const loadedStart = getSearchStartOffset();
       let html = null;
       let fromCache = false;
 
@@ -4133,6 +4343,7 @@
         html = response.responseText || '';
       }
 
+      html = normalizeGuestSearchHtml(html);
       const doc = new DOMParser().parseFromString(html, 'text/html');
       if (token !== searchPageToken) return;
 
@@ -4150,6 +4361,8 @@
         statusEl.textContent = t('searchPageNoContent');
         statusEl.dataset.kind = 'error';
         searchPageLoadedHref = location.href;
+        searchPageLoadedStart = loadedStart;
+        searchResultsFingerprint = getSearchResultsFingerprint();
         return;
       }
 
@@ -4173,6 +4386,8 @@
       decorateBlockedSearchResults();
       // Mark before probe/DOM tweaks so MutationObserver remounts do not re-fetch
       searchPageLoadedHref = location.href;
+      searchPageLoadedStart = loadedStart;
+      searchResultsFingerprint = getSearchResultsFingerprint();
       void probeSearchPageBlocked(token);
     } catch (err) {
       if (token !== searchPageToken) return;
@@ -4188,6 +4403,8 @@
         error: err && err.message ? err.message : String(err),
       });
       statusEl.dataset.kind = 'error';
+    } finally {
+      if (token === searchPageToken) searchPageLoading = false;
     }
   }
 

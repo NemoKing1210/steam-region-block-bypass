@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.6] - 2026-07-13
+
+### Fixed
+
+- Guest `/search` no longer fails with “no results” after the pagination change — fetch uses the full `/search` page with `start`/`count` again (the `infinite=1` results endpoint returns JSON, not HTML)
+
+## [1.16.5] - 2026-07-13
+
+### Fixed
+
+- Guest `/search` pagination now requests the correct page via `start`/`count` on `/search/results` (Steam’s `page=` URL alone was ignored, so page 2+ kept reloading page 1)
+
+## [1.16.4] - 2026-07-13
+
+### Fixed
+
+- Search pagination / AJAX result updates now re-run blocked-game highlighting and probes (Steam changes pages without a full reload)
+
 ## [1.16.3] - 2026-07-13
 
 ### Changed
