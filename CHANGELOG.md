@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.3] - 2026-07-12
+
+### Fixed
+
+- When the host page is signed into Steam, replace the guest tag modal “Sign In” panel with the real tagging form so “+” can add tags in-session
+
+## [1.6.2] - 2026-07-12
+
+### Fixed
+
+- When the host page is signed into Steam, remove the guest “Open in Desktop App / You're not signed in!” banner (`.banner_open_in_steam`)
+
+## [1.6.1] - 2026-07-12
+
+### Fixed
+
+- Tag “+” button works again: inject `#app_tagging_modal` and re-run `InitAppTagModal` (defines `ShowAppTagModal`), which live outside `.game_page_background` and were skipped on direct inject
+
 ## [1.6.0] - 2026-07-12
 
 ### Added

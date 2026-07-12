@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.6.0
+// @version           1.6.3
 // @description       View Steam store pages blocked in your region by refetching without account cookies; optional proxy gateway
 // @description:ru    Показывает страницы магазина Steam, недоступные в регионе, повторным запросом без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 重新请求查看因区域限制不可用的 Steam 商店页面；可选代理网关
@@ -1070,6 +1070,9 @@
       )
       .forEach((el) => el.remove());
 
+    // Tag modal lives outside .game_page_background; drop leftovers from a prior inject
+    document.querySelectorAll('#app_tagging_modal').forEach((el) => el.remove());
+
     // Leftover “Oops” blocks that are not inside page_header_ctn
     template.querySelectorAll('.pageheader').forEach((h2) => {
       if (/oops/i.test(h2.textContent || '')) {
@@ -1403,16 +1406,20 @@
   }
 
   /**
-   * Guest app HTML always includes “Sign in to add this item…”.
-   * Remove that prompt when the browser session is already logged into Steam.
+   * Guest app HTML assumes an anonymous viewer (“Sign in to add…”, “You're not signed in!”).
+   * Drop that chrome when the host store session is already logged in.
    */
-  function stripGuestQueueSignInPrompt(root) {
+  function stripGuestSignedOutChrome(root) {
     if (!isHostLoggedIn()) return;
+
     const actions = root.querySelector('#queueActionsCtn') || root.querySelector('.queue_actions_ctn');
-    if (!actions) return;
-    actions.querySelectorAll(':scope > p').forEach((p) => {
-      if (p.querySelector('a[href*="/login"]')) p.remove();
-    });
+    if (actions) {
+      actions.querySelectorAll(':scope > p').forEach((p) => {
+        if (p.querySelector('a[href*="/login"]')) p.remove();
+      });
+    }
+
+    root.querySelectorAll('.banner_open_in_steam').forEach((el) => el.remove());
   }
 
   /**
@@ -1454,6 +1461,51 @@
   }
 
   /**
+   * #app_tagging_modal + InitAppTagModal sit near the footer, outside
+   * .game_page_background. ShowAppTagModal is only assigned inside InitAppTagModal.
+   * Guest HTML only ships a Sign In panel on the right; restore the tagging form when
+   * the host session is already logged in so InitAppTagModal can wire it up.
+   */
+  function upgradeGuestAppTagModalForHostSession(modal) {
+    if (!isHostLoggedIn()) return;
+    const right = modal.querySelector('.app_tag_modal_right');
+    if (!right || right.querySelector('#app_tag_form')) return;
+    if (!right.querySelector('a[href*="/login"]')) return;
+
+    // Steam requires new tags in English; match the logged-in store markup.
+    right.innerHTML = `
+      <h2>Tags you've applied to this product:<span class="app_tag_modal_tooltip" data-store-tooltip="These are tags you've applied to this product.">(?)</span></h2>
+      <div class="app_tags your_tags"></div>
+      <p>Enter a new tag in English:</p>
+      <p class="small">Suitable tags should be terms that other users would find useful to browse by.</p>
+      <form id="app_tag_form" name="app_tag_form">
+        <div class="app_tag_form_ctn">
+          <div class="gray_bevel for_text_input fullwidth">
+            <input type="text" name="tag" value="" autocomplete="off" placeholder="Enter a tag">
+          </div>
+          <button class="btnv6_blue_hoverfade btn_medium" type="submit"><span>Add</span></button>
+        </div>
+      </form>
+      <div class="previous_tags_ctn">
+        <p>Apply a tag you've used on other products:</p>
+        <div class="app_tags previous_tags"></div>
+      </div>
+    `;
+  }
+
+  function injectGuestAppTaggingModal(remoteDoc) {
+    document.querySelectorAll('#app_tagging_modal').forEach((el) => el.remove());
+    const modal = remoteDoc.querySelector('#app_tagging_modal');
+    if (!modal) return false;
+    const node = document.importNode(modal, true);
+    node.querySelectorAll('script').forEach((el) => el.remove());
+    absolutizeUrls(node);
+    upgradeGuestAppTagModalForHostSession(node);
+    (document.body || document.documentElement).appendChild(node);
+    return true;
+  }
+
+  /**
    * Page-level bootstraps (GStoreItemData, …) sit in <head>/early <body>, outside
    * .game_page_background. Widget inits live inside the extracted game tree.
    * importNode copies <script> nodes but does not execute them — re-create + append.
@@ -1472,10 +1524,12 @@
     remoteDoc.querySelectorAll('script:not([src])').forEach((script) => {
       if (!isExecutableScriptTag(script)) return;
       const code = script.textContent || '';
-      if (
+      const isStoreBoot =
         /GStoreItemData|g_bUseOldReviewDisplay|g_rgAppKeywords|g_rgAppData/i.test(code) &&
-        !/home_tab_section|InitTopSellersControls|g_rgDelayedLoadImages/i.test(code)
-      ) {
+        !/home_tab_section|InitTopSellersControls|g_rgDelayedLoadImages/i.test(code);
+      // Defines window.ShowAppTagModal; lives next to #app_tagging_modal (outside game root)
+      const isAppTagInit = /InitAppTagModal\s*\(/i.test(code);
+      if (isStoreBoot || isAppTagInit) {
         push(code);
       }
     });
@@ -1525,11 +1579,12 @@
     // Drop inert copied scripts + extension junk; Steam JS is re-run below
     wrapper.querySelectorAll('script, .alike_sub, #ag_changes_button, .ag_changes').forEach((el) => el.remove());
     absolutizeUrls(wrapper);
-    stripGuestQueueSignInPrompt(wrapper);
+    stripGuestSignedOutChrome(wrapper);
     insertBannerIntoTabletGrid(wrapper, createBanner({ fromCache: !!options.fromCache }));
 
     shell.appendChild(wrapper);
     template.appendChild(shell);
+    injectGuestAppTaggingModal(remoteDoc);
 
     const title = docTitle(wrapper);
     if (title) document.title = title;
@@ -1540,6 +1595,12 @@
     await waitForSrbbStylesheets();
     await ensureAppPageScripts(remoteDoc);
     await waitForPaint();
+    // Avoid stacking VisibleAppTags handlers when InitAppTagModal re-runs on Reload
+    runInlineScript(`
+(function () {
+  if (typeof $J !== 'undefined') $J(window).off('resize.VisibleAppTags');
+})();
+`);
     for (const code of inlineScripts) {
       try {
         runInlineScript(code);
