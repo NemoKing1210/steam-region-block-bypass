@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.12.0
+// @version           1.15.0
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -48,10 +48,14 @@
   const STORAGE_KEY = 'srbb_settings';
   const CACHE_STORAGE_KEY = 'srbb_page_cache';
   const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';
+  /** One-time upgrade: guest search used to default off */
+  const SEARCH_DEFAULT_ON_FLAG = 'srbb_migrated_search_default_on_v1';
   /** Soft cap so GM storage does not grow without bound */
   const CACHE_MAX_ENTRIES = 30;
   const BLOCKED_APPS_MAX_ENTRIES = 500;
   const PROBE_CONCURRENCY_MAX = 5;
+  /** How many guest suggest rows to fetch/show from /search/results */
+  const SUGGEST_RESULT_COUNT = 25;
   /** Upper bound for the settings field (7 days) */
   const CACHE_MINUTES_MAX = 10080;
   const DEFAULT_SETTINGS = {
@@ -67,7 +71,7 @@
     /** Guest HTML TTL in minutes; 0 disables caching */
     cacheMinutes: 60,
     /** Guest search: anonymous suggest dropdown + /search results */
-    searchUnblocked: false,
+    searchUnblocked: true,
     /** Remember app IDs when Steam shows a region block */
     rememberBlockedApps: true,
     /** Highlight remembered blocked apps in guest search */
@@ -167,9 +171,10 @@
         'How long to reuse a successful guest page before refetching. 0 disables cache. Reload always fetches fresh.',
       searchUnblocked: 'Guest search',
       searchUnblockedHint:
-        'Search suggestions and /search results are fetched without account cookies (same guest stack as app bypass).',
-
-
+        'Search suggestions and /search results are fetched without account cookies (same guest stack as app bypass). On by default.',
+      suggestGuestNotice:
+        'Region Bypass guest search is on — results load without account cookies and can show region-blocked titles.',
+      suggestGuestSettings: 'Disable in Settings → Search',
       suggestEmpty: 'Type to search the store as a guest (no account cookies)',
       suggestLoading: 'Searching…',
       suggestFailed: 'Search suggestions failed: {error}',
@@ -184,6 +189,7 @@
       suggestControllerPartial: 'Partial controller',
       suggestAppId: 'App ID {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region blocked',
       rememberBlockedApps: 'Remember blocked games',
       rememberBlockedAppsHint:
@@ -206,7 +212,8 @@
       blockedAppsCount: '{count} blocked games saved',
       clearBlockedApps: 'Clear list',
       searchPageLoading: 'Loading search results without account cookies…',
-      searchPageBanner: 'Search results shown via anonymous guest fetch',
+      searchPageBanner: 'Guest search via Region Bypass (anonymous fetch)',
+      searchPageBannerSettings: 'Settings',
       searchPageNoContent: 'No search results in guest response. Check proxy or try again.',
       useProxy: 'Use proxy gateway',
       on: 'ON',
@@ -270,9 +277,10 @@
         'Как долго повторно использовать успешно загруженную гостевую страницу. 0 отключает кеш. «Обновить» всегда запрашивает заново.',
       searchUnblocked: 'Гостевой поиск',
       searchUnblockedHint:
-        'Подсказки и результаты /search запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений).',
-
-
+        'Подсказки и результаты /search запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений). Включён по умолчанию.',
+      suggestGuestNotice:
+        'Включён гостевой поиск Region Bypass — результаты без cookies аккаунта, видны и регионально заблокированные игры.',
+      suggestGuestSettings: 'Отключить: Настройки → Поиск',
       suggestEmpty: 'Введите запрос для гостевого поиска (без cookies аккаунта)',
       suggestLoading: 'Поиск…',
       suggestFailed: 'Не удалось загрузить подсказки: {error}',
@@ -287,6 +295,7 @@
       suggestControllerPartial: 'Частичная поддержка геймпада',
       suggestAppId: 'ID приложения {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Регион заблокирован',
       rememberBlockedApps: 'Запоминать заблокированные игры',
       rememberBlockedAppsHint:
@@ -309,7 +318,8 @@
       blockedAppsCount: 'Сохранено заблокированных игр: {count}',
       clearBlockedApps: 'Очистить список',
       searchPageLoading: 'Загрузка результатов поиска без cookies аккаунта…',
-      searchPageBanner: 'Результаты поиска показаны через анонимный гостевой запрос',
+      searchPageBanner: 'Гостевой поиск Region Bypass (анонимный запрос)',
+      searchPageBannerSettings: 'Настройки',
       searchPageNoContent: 'В гостевом ответе нет результатов. Проверьте прокси или попробуйте снова.',
       useProxy: 'Использовать proxy gateway',
       on: 'ВКЛ',
@@ -367,9 +377,9 @@
       cacheMinutes: '缓存时长（分钟）',
       cacheMinutesHint: '成功的访客页面在重新请求前可复用多久。0 禁用缓存。「重新加载」始终获取最新内容。',
       searchUnblocked: '访客搜索',
-      searchUnblockedHint: '搜索建议和 /search 结果以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。',
-
-
+      searchUnblockedHint: '搜索建议和 /search 结果以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。默认开启。',
+      suggestGuestNotice: '已启用 Region Bypass 访客搜索 — 结果不带账号 Cookie，可显示地区受限游戏。',
+      suggestGuestSettings: '在“设置 → 搜索”中关闭',
       suggestEmpty: '输入关键词以访客身份搜索商店（无账号 Cookie）',
       suggestLoading: '搜索中…',
       suggestFailed: '搜索建议加载失败：{error}',
@@ -384,6 +394,7 @@
       suggestControllerPartial: '部分手柄支持',
       suggestAppId: '应用 ID {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地区限制',
       rememberBlockedApps: '记住被封锁的游戏',
       rememberBlockedAppsHint: '当 Steam 在应用页显示区域错误时，本地保存其 ID，以便在访客搜索中高亮。',
@@ -405,7 +416,8 @@
       blockedAppsCount: '已保存 {count} 个被封锁游戏',
       clearBlockedApps: '清空列表',
       searchPageLoading: '正在以无账号 Cookie 加载搜索结果…',
-      searchPageBanner: '搜索结果通过匿名访客请求显示',
+      searchPageBanner: '访客搜索（Region Bypass，匿名请求）',
+      searchPageBannerSettings: '设置',
       searchPageNoContent: '访客响应中没有搜索结果。请检查代理或重试。',
       useProxy: '使用代理网关',
       on: '开',
@@ -469,9 +481,10 @@
         'Cuánto tiempo reutilizar una página de invitado correcta antes de volver a pedirla. 0 desactiva la caché. Recargar siempre obtiene datos frescos.',
       searchUnblocked: 'Búsqueda invitado',
       searchUnblockedHint:
-        'Las sugerencias y los resultados de /search se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps).',
-
-
+        'Las sugerencias y los resultados de /search se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps). Activado por defecto.',
+      suggestGuestNotice:
+        'La búsqueda invitado de Region Bypass está activa — resultados sin cookies de cuenta; pueden verse títulos bloqueados por región.',
+      suggestGuestSettings: 'Desactivar en Ajustes → Búsqueda',
       suggestEmpty: 'Escribe para buscar en la tienda como invitado (sin cookies de cuenta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Error al cargar sugerencias: {error}',
@@ -486,6 +499,7 @@
       suggestControllerPartial: 'Mando parcial',
       suggestAppId: 'ID de app {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Región bloqueada',
       rememberBlockedApps: 'Recordar juegos bloqueados',
       rememberBlockedAppsHint:
@@ -508,7 +522,8 @@
       blockedAppsCount: '{count} juegos bloqueados guardados',
       clearBlockedApps: 'Borrar lista',
       searchPageLoading: 'Cargando resultados de búsqueda sin cookies de cuenta…',
-      searchPageBanner: 'Resultados mostrados mediante petición anónima de invitado',
+      searchPageBanner: 'Búsqueda invitado de Region Bypass (petición anónima)',
+      searchPageBannerSettings: 'Ajustes',
       searchPageNoContent: 'No hay resultados en la respuesta invitado. Revisa el proxy o inténtalo de nuevo.',
       useProxy: 'Usar proxy gateway',
       on: 'ON',
@@ -572,9 +587,10 @@
         'Por quanto tempo reutilizar uma página de convidado bem-sucedida antes de buscar de novo. 0 desativa o cache. Recarregar sempre busca dados novos.',
       searchUnblocked: 'Busca convidado',
       searchUnblockedHint:
-        'Sugestões e resultados de /search são obtidos sem cookies da conta (mesmo stack convidado do bypass de apps).',
-
-
+        'Sugestões e resultados de /search são obtidos sem cookies da conta (mesmo stack convidado do bypass de apps). Ativado por padrão.',
+      suggestGuestNotice:
+        'Busca convidado do Region Bypass ativa — resultados sem cookies da conta; títulos bloqueados por região podem aparecer.',
+      suggestGuestSettings: 'Desativar em Configurações → Busca',
       suggestEmpty: 'Digite para buscar na loja como convidado (sem cookies da conta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Falha ao carregar sugestões: {error}',
@@ -589,6 +605,7 @@
       suggestControllerPartial: 'Controle parcial',
       suggestAppId: 'ID do app {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Região bloqueada',
       rememberBlockedApps: 'Lembrar jogos bloqueados',
       rememberBlockedAppsHint:
@@ -611,7 +628,8 @@
       blockedAppsCount: '{count} jogos bloqueados salvos',
       clearBlockedApps: 'Limpar lista',
       searchPageLoading: 'Carregando resultados da busca sem cookies da conta…',
-      searchPageBanner: 'Resultados exibidos via requisição anônima de convidado',
+      searchPageBanner: 'Busca convidado do Region Bypass (requisição anônima)',
+      searchPageBannerSettings: 'Configurações',
       searchPageNoContent: 'Sem resultados na resposta convidado. Verifique o proxy ou tente novamente.',
       useProxy: 'Usar proxy gateway',
       on: 'ON',
@@ -675,9 +693,10 @@
         'Wie lange eine erfolgreiche Gastseite wiederverwendet wird, bevor neu geladen wird. 0 deaktiviert den Cache. Neu laden holt immer frische Daten.',
       searchUnblocked: 'Gast-Suche',
       searchUnblockedHint:
-        'Suchvorschläge und /search-Ergebnisse werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass).',
-
-
+        'Suchvorschläge und /search-Ergebnisse werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass). Standardmäßig aktiv.',
+      suggestGuestNotice:
+        'Region-Bypass-Gast-Suche ist aktiv — Ergebnisse ohne Account-Cookies; regional gesperrte Titel können erscheinen.',
+      suggestGuestSettings: 'Deaktivieren unter Einstellungen → Suche',
       suggestEmpty: 'Tippen, um den Store als Gast zu durchsuchen (ohne Account-Cookies)',
       suggestLoading: 'Suche…',
       suggestFailed: 'Suchvorschläge fehlgeschlagen: {error}',
@@ -692,6 +711,7 @@
       suggestControllerPartial: 'Teilweise Controller-Unterstützung',
       suggestAppId: 'App-ID {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region gesperrt',
       rememberBlockedApps: 'Gesperrte Spiele merken',
       rememberBlockedAppsHint:
@@ -714,7 +734,8 @@
       blockedAppsCount: '{count} gesperrte Spiele gespeichert',
       clearBlockedApps: 'Liste leeren',
       searchPageLoading: 'Suchergebnisse werden ohne Account-Cookies geladen…',
-      searchPageBanner: 'Suchergebnisse über anonymen Gastabruf angezeigt',
+      searchPageBanner: 'Gast-Suche von Region Bypass (anonymer Abruf)',
+      searchPageBannerSettings: 'Einstellungen',
       searchPageNoContent: 'Keine Suchergebnisse in der Gastantwort. Proxy prüfen oder erneut versuchen.',
       useProxy: 'Proxy-Gateway verwenden',
       on: 'AN',
@@ -778,9 +799,10 @@
         'Combien de temps réutiliser une page invité réussie avant de la redemander. 0 désactive le cache. Recharger récupère toujours des données fraîches.',
       searchUnblocked: 'Recherche invité',
       searchUnblockedHint:
-        'Les suggestions et résultats /search sont récupérés sans cookies de compte (même pile invité que le bypass d’apps).',
-
-
+        'Les suggestions et résultats /search sont récupérés sans cookies de compte (même pile invité que le bypass d’apps). Activé par défaut.',
+      suggestGuestNotice:
+        'Recherche invité Region Bypass active — résultats sans cookies de compte ; les titres bloqués par région peuvent apparaître.',
+      suggestGuestSettings: 'Désactiver dans Paramètres → Recherche',
       suggestEmpty: 'Tapez pour chercher dans la boutique en invité (sans cookies de compte)',
       suggestLoading: 'Recherche…',
       suggestFailed: 'Échec des suggestions : {error}',
@@ -795,6 +817,7 @@
       suggestControllerPartial: 'Manette partielle',
       suggestAppId: 'ID app {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Région bloquée',
       rememberBlockedApps: 'Mémoriser les jeux bloqués',
       rememberBlockedAppsHint:
@@ -817,7 +840,8 @@
       blockedAppsCount: '{count} jeux bloqués enregistrés',
       clearBlockedApps: 'Vider la liste',
       searchPageLoading: 'Chargement des résultats sans cookies de compte…',
-      searchPageBanner: 'Résultats affichés via requête anonyme invité',
+      searchPageBanner: 'Recherche invité Region Bypass (requête anonyme)',
+      searchPageBannerSettings: 'Paramètres',
       searchPageNoContent: 'Aucun résultat dans la réponse invité. Vérifiez le proxy ou réessayez.',
       useProxy: 'Utiliser le proxy gateway',
       on: 'ON',
@@ -880,9 +904,10 @@
         '成功したゲストページを再取得するまでの保持時間。0でキャッシュ無効。「再読み込み」は常に最新を取得します。',
       searchUnblocked: 'ゲスト検索',
       searchUnblockedHint:
-        '検索候補と /search 結果をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。',
-
-
+        '検索候補と /search 結果をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。デフォルトでオン。',
+      suggestGuestNotice:
+        'Region Bypass のゲスト検索が有効です — アカウントCookieなしで取得し、地域制限タイトルも表示できます。',
+      suggestGuestSettings: '設定 → 検索 で無効化',
       suggestEmpty: 'ゲストとしてストアを検索するには入力してください（アカウントCookieなし）',
       suggestLoading: '検索中…',
       suggestFailed: '検索候補の取得に失敗: {error}',
@@ -897,6 +922,7 @@
       suggestControllerPartial: '一部コントローラー対応',
       suggestAppId: 'アプリ ID {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地域制限',
       rememberBlockedApps: 'ブロックされたゲームを記憶',
       rememberBlockedAppsHint: 'アプリページで地域エラーが出たとき、IDをローカル保存しゲスト検索で強調表示します。',
@@ -918,7 +944,8 @@
       blockedAppsCount: '保存済みブロックゲーム: {count}',
       clearBlockedApps: 'リストを消去',
       searchPageLoading: 'アカウントCookieなしで検索結果を読み込み中…',
-      searchPageBanner: '検索結果は匿名ゲスト取得で表示されています',
+      searchPageBanner: 'Region Bypass ゲスト検索（匿名取得）',
+      searchPageBannerSettings: '設定',
       searchPageNoContent: 'ゲスト応答に検索結果がありません。プロキシを確認するか再試行してください。',
       useProxy: 'プロキシゲートウェイを使用',
       on: 'ON',
@@ -981,9 +1008,10 @@
         '성공한 게스트 페이지를 다시 요청하기 전까지 얼마나 재사용할지. 0이면 캐시 비활성. 「다시 불러오기」는 항상 새로 가져옵니다.',
       searchUnblocked: '게스트 검색',
       searchUnblockedHint:
-        '검색 제안과 /search 결과를 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택).',
-
-
+        '검색 제안과 /search 결과를 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택). 기본으로 켜짐.',
+      suggestGuestNotice:
+        'Region Bypass 게스트 검색이 켜져 있습니다 — 계정 쿠키 없이 결과를 가져오며 지역 제한 타이틀도 보일 수 있습니다.',
+      suggestGuestSettings: '설정 → 검색에서 끄기',
       suggestEmpty: '게스트로 스토어를 검색하려면 입력하세요(계정 쿠키 없음)',
       suggestLoading: '검색 중…',
       suggestFailed: '검색 제안을 불러오지 못했습니다: {error}',
@@ -998,6 +1026,7 @@
       suggestControllerPartial: '부분 컨트롤러 지원',
       suggestAppId: '앱 ID {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '지역 제한',
       rememberBlockedApps: '차단된 게임 기억',
       rememberBlockedAppsHint: '앱 페이지에서 지역 오류가 나오면 ID를 로컬에 저장해 게스트 검색에서 강조합니다.',
@@ -1019,7 +1048,8 @@
       blockedAppsCount: '저장된 차단 게임 {count}개',
       clearBlockedApps: '목록 지우기',
       searchPageLoading: '계정 쿠키 없이 검색 결과를 불러오는 중…',
-      searchPageBanner: '검색 결과는 익명 게스트 요청으로 표시됩니다',
+      searchPageBanner: 'Region Bypass 게스트 검색(익명 요청)',
+      searchPageBannerSettings: '설정',
       searchPageNoContent: '게스트 응답에 검색 결과가 없습니다. 프록시를 확인하거나 다시 시도하세요.',
       useProxy: '프록시 게이트웨이 사용',
       on: 'ON',
@@ -1083,9 +1113,10 @@
         'Jak długo ponownie używać udanej strony gościa przed ponownym pobraniem. 0 wyłącza cache. Odśwież zawsze pobiera świeże dane.',
       searchUnblocked: 'Wyszukiwanie gościa',
       searchUnblockedHint:
-        'Podpowiedzi i wyniki /search są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji).',
-
-
+        'Podpowiedzi i wyniki /search są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji). Domyślnie włączone.',
+      suggestGuestNotice:
+        'Wyszukiwanie gościa Region Bypass jest włączone — wyniki bez cookies konta; mogą być widoczne tytuły zablokowane regionalnie.',
+      suggestGuestSettings: 'Wyłącz w Ustawienia → Wyszukiwanie',
       suggestEmpty: 'Wpisz, aby przeszukać sklep jako gość (bez cookies konta)',
       suggestLoading: 'Wyszukiwanie…',
       suggestFailed: 'Nie udało się załadować podpowiedzi: {error}',
@@ -1100,6 +1131,7 @@
       suggestControllerPartial: 'Częściowe wsparcie pada',
       suggestAppId: 'ID aplikacji {id}',
       suggestMetascore: 'Metascore {score}',
+      suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region zablokowany',
       rememberBlockedApps: 'Zapamiętuj zablokowane gry',
       rememberBlockedAppsHint:
@@ -1122,7 +1154,8 @@
       blockedAppsCount: 'Zapisane zablokowane gry: {count}',
       clearBlockedApps: 'Wyczyść listę',
       searchPageLoading: 'Ładowanie wyników wyszukiwania bez cookies konta…',
-      searchPageBanner: 'Wyniki wyszukiwania wyświetlane przez anonimowe pobranie gościa',
+      searchPageBanner: 'Wyszukiwanie gościa Region Bypass (anonimowe pobranie)',
+      searchPageBannerSettings: 'Ustawienia',
       searchPageNoContent: 'Brak wyników w odpowiedzi gościa. Sprawdź proxy lub spróbuj ponownie.',
       useProxy: 'Użyj proxy gateway',
       on: 'WŁ',
@@ -1264,7 +1297,8 @@
   }
 
   function loadSettings() {
-    const raw = GM_getValue(STORAGE_KEY, null);
+    let raw = GM_getValue(STORAGE_KEY, null);
+    raw = migrateSearchDefaultOn(raw);
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETTINGS };
     const merged = { ...DEFAULT_SETTINGS, ...raw };
     delete merged.rememberSearchTerm;
@@ -1272,6 +1306,16 @@
     merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
     merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
     return merged;
+  }
+
+  function migrateSearchDefaultOn(raw) {
+    if (GM_getValue(SEARCH_DEFAULT_ON_FLAG, false)) return raw;
+    GM_setValue(SEARCH_DEFAULT_ON_FLAG, true);
+    if (!raw || typeof raw !== 'object') return raw;
+    if (raw.searchUnblocked === true) return raw;
+    const next = { ...raw, searchUnblocked: true };
+    GM_setValue(STORAGE_KEY, next);
+    return next;
   }
 
   function saveSettings(next) {
@@ -1496,15 +1540,10 @@
 
   function prepareSuggestItems(items) {
     if (!settings.markBlockedInSearch) return items;
-    const next = items.map((item) => ({
+    return items.map((item) => ({
       ...item,
       regionBlocked: isBlockedApp(item.id),
     }));
-    next.sort((a, b) => {
-      if (a.regionBlocked === b.regionBlocked) return 0;
-      return a.regionBlocked ? -1 : 1;
-    });
-    return next;
   }
 
   function buildSuggestBlockedBadgeHtml(item) {
@@ -1519,6 +1558,9 @@
     const cc = getStoreCountryCode();
     if (cc) {
       url.searchParams.set('cc', cc.toLowerCase());
+    }
+    if (/\/search\/?/i.test(url.pathname)) {
+      url.searchParams.set('ignore_preferences', '1');
     }
     return url.toString();
   }
@@ -2553,6 +2595,10 @@
     panel.hidden = true;
     panel.setAttribute('role', 'listbox');
     panel.innerHTML = `
+      <div class="srbb-suggest__notice" id="srbb-suggest-notice">
+        <div class="srbb-suggest__notice-text">${escapeHtml(t('suggestGuestNotice'))}</div>
+        <button type="button" class="srbb-suggest__notice-btn" data-srbb="suggest-settings">${escapeHtml(t('suggestGuestSettings'))}</button>
+      </div>
       <div class="srbb-suggest__inner"></div>
       <div class="srbb-suggest__probe" id="srbb-suggest-probe" hidden>
         <div class="srbb-suggest__probe-track"><div class="srbb-suggest__probe-fill" id="srbb-suggest-probe-fill"></div></div>
@@ -2561,9 +2607,23 @@
     `;
     mount.appendChild(panel);
 
+    panel.querySelector('[data-srbb="suggest-settings"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSearchSettings();
+    });
+
     panel.addEventListener('mousedown', (e) => {
+      // Keep focus in the search field, but allow the settings control to work
+      if (e.target.closest('[data-srbb="suggest-settings"]')) return;
       e.preventDefault();
     });
+  }
+
+  function openSearchSettings() {
+    hideSuggestDropdown();
+    togglePanel(true);
+    switchPanelTab('search');
   }
 
   function updateSuggestProbeProgress(progress) {
@@ -2667,7 +2727,10 @@
     if (token !== suggestToken) return;
     finishSuggestProbe(result.found);
     if (result.found > 0 && lastSuggestItems.length) {
-      renderSuggestItems(prepareSuggestItems(lastSuggestItems));
+      lastSuggestItems = lastSuggestItems.map((item) => ({
+        ...item,
+        regionBlocked: isBlockedApp(item.id),
+      }));
     }
   }
 
@@ -2708,6 +2771,7 @@
       if (term) url.searchParams.set('term', term);
       url.searchParams.set('l', getSteamStoreLanguage());
       url.searchParams.set('cc', getStoreCountryCode().toLowerCase());
+      url.searchParams.set('ignore_preferences', '1');
       hideSuggestDropdown();
       location.href = url.toString();
     });
@@ -2785,6 +2849,296 @@
     url.searchParams.set('l', getSteamStoreLanguage());
     url.searchParams.set('cc', getStoreCountryCode().toLowerCase());
     return url.toString();
+  }
+
+  function buildSearchResultsMetaUrl(term, count = SUGGEST_RESULT_COUNT) {
+    const url = new URL('https://store.steampowered.com/search/results/');
+    url.searchParams.set('term', term);
+    url.searchParams.set('count', String(count));
+    url.searchParams.set('start', '0');
+    url.searchParams.set('infinite', '1');
+    url.searchParams.set('ignore_preferences', '1');
+    url.searchParams.set('l', getSteamStoreLanguage());
+    url.searchParams.set('cc', getStoreCountryCode().toLowerCase());
+    return url.toString();
+  }
+
+  function parseReviewTooltip(tooltipHtml) {
+    const text = String(tooltipHtml || '')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"');
+    const parts = text
+      .split(/<br\s*\/?>/i)
+      .map((part) => part.replace(/<[^>]+>/g, '').trim())
+      .filter(Boolean);
+    const summary = parts[0] || '';
+    const detail = parts[1] || '';
+    const percentMatch = detail.match(/(\d+)\s*%/);
+    return {
+      summary,
+      percent: percentMatch ? percentMatch[1] : '',
+      detail: detail || summary,
+    };
+  }
+
+  function emptySuggestItemFields() {
+    return {
+      priceLabel: '',
+      priceOriginal: '',
+      discountPct: 0,
+      isFree: false,
+      platforms: null,
+      metascore: '',
+      controllerSupport: '',
+      releaseDate: '',
+      reviewSummary: '',
+      reviewPercent: '',
+      reviewTone: '',
+      reviewDetail: '',
+    };
+  }
+
+  function parseSearchResultRowType(row) {
+    const href = String(row.getAttribute('href') || '');
+    if (/\/bundle\//i.test(href) || row.hasAttribute('data-ds-bundleid')) return 'bundle';
+    if (/\/sub\//i.test(href) || row.hasAttribute('data-ds-packageid')) return 'bundle';
+    if (row.hasAttribute('data-ds-appid')) return 'game';
+    return 'app';
+  }
+
+  function parseSearchResultRowPrice(row) {
+    let priceLabel = '';
+    let priceOriginal = '';
+    let discountPct = 0;
+    let isFree = false;
+
+    const discountBlock = row.querySelector('.discount_block, .search_discount_block');
+    const finalEl = row.querySelector('.discount_final_price, .search_price');
+    const originalEl = row.querySelector('.discount_original_price');
+    priceLabel = (finalEl?.textContent || '').replace(/\s+/g, ' ').trim();
+    priceOriginal = (originalEl?.textContent || '').replace(/\s+/g, ' ').trim();
+
+    if (discountBlock) {
+      const rawDiscount = discountBlock.getAttribute('data-discount');
+      const parsedDiscount = Number(rawDiscount);
+      if (Number.isFinite(parsedDiscount) && parsedDiscount > 0) {
+        discountPct = parsedDiscount;
+      }
+      const priceFinal = Number(discountBlock.getAttribute('data-price-final'));
+      if (Number.isFinite(priceFinal) && priceFinal === 0) {
+        isFree = true;
+      }
+    }
+
+    if (!priceLabel) {
+      const freeEl = row.querySelector('.search_price.free, .discount_final_price.free');
+      if (freeEl) {
+        priceLabel = (freeEl.textContent || '').replace(/\s+/g, ' ').trim() || t('suggestFree');
+        isFree = true;
+      }
+    }
+
+    if (priceLabel && /free/i.test(priceLabel)) {
+      isFree = true;
+      priceLabel = t('suggestFree');
+    }
+
+    return { priceLabel, priceOriginal, discountPct, isFree };
+  }
+
+  function parseSearchResultRowPlatforms(row) {
+    const platRoot = row.querySelector('.search_platforms');
+    if (!platRoot) return null;
+    const platforms = {
+      windows: !!platRoot.querySelector('.platform_img.win, .win'),
+      mac: !!platRoot.querySelector('.platform_img.mac, .mac'),
+      linux: !!platRoot.querySelector('.platform_img.linux, .linux'),
+    };
+    if (!platforms.windows && !platforms.mac && !platforms.linux) return null;
+    return platforms;
+  }
+
+  function parseSearchResultRowReviews(row) {
+    const reviewEl = row.querySelector('.search_review_summary');
+    if (!reviewEl) {
+      return {
+        reviewSummary: '',
+        reviewPercent: '',
+        reviewTone: '',
+        reviewDetail: '',
+      };
+    }
+
+    let reviewTone = '';
+    if (reviewEl.classList.contains('positive')) reviewTone = 'positive';
+    else if (reviewEl.classList.contains('mixed')) reviewTone = 'mixed';
+    else if (reviewEl.classList.contains('negative')) reviewTone = 'negative';
+
+    const parsed = parseReviewTooltip(reviewEl.getAttribute('data-tooltip-html') || '');
+    return {
+      reviewSummary: parsed.summary,
+      reviewPercent: parsed.percent,
+      reviewTone,
+      reviewDetail: parsed.detail,
+    };
+  }
+
+  function parseSearchResultItems(html) {
+    if (!html) return [];
+    const doc = new DOMParser().parseFromString(String(html), 'text/html');
+    const items = [];
+    const seen = Object.create(null);
+
+    doc.querySelectorAll('a.search_result_row[data-ds-appid]').forEach((row) => {
+      const rawId = String(row.getAttribute('data-ds-appid') || '')
+        .split(',')[0]
+        .trim();
+      if (!rawId || seen[rawId]) return;
+      seen[rawId] = true;
+
+      const name = (row.querySelector('.title')?.textContent || '').trim();
+      if (!name) return;
+
+      const img = row.querySelector('.search_capsule img, img')?.getAttribute('src') || '';
+      const price = parseSearchResultRowPrice(row);
+      const reviews = parseSearchResultRowReviews(row);
+
+      items.push({
+        id: rawId,
+        name,
+        type: parseSearchResultRowType(row),
+        img,
+        ...emptySuggestItemFields(),
+        ...price,
+        platforms: parseSearchResultRowPlatforms(row),
+        releaseDate: (row.querySelector('.search_released')?.textContent || '').trim(),
+        ...reviews,
+      });
+    });
+
+    return items;
+  }
+
+  async function fetchSearchResultItems(term) {
+    const requestUrl = buildRequestUrl(buildSearchResultsMetaUrl(term, SUGGEST_RESULT_COUNT));
+    const response = await gmRequest(requestUrl);
+    if (response.status < 200 || response.status >= 400) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const parsed = parseJsonResponse(response.responseText || '');
+    const html =
+      parsed && typeof parsed === 'object' && typeof parsed.results_html === 'string'
+        ? parsed.results_html
+        : response.responseText || '';
+    return parseSearchResultItems(html);
+  }
+
+  function mergeSuggestStoreExtras(items, storeItems) {
+    if (!storeItems?.length || !items.length) return items;
+    const byId = Object.create(null);
+    storeItems.forEach((item) => {
+      byId[item.id] = item;
+    });
+    return items.map((item) => {
+      const extra = byId[item.id];
+      if (!extra) return item;
+      return {
+        ...item,
+        type: item.type || extra.type,
+        img: item.img || extra.img,
+        priceLabel: extra.priceLabel || item.priceLabel,
+        priceOriginal: extra.priceOriginal || item.priceOriginal,
+        discountPct: extra.discountPct || item.discountPct,
+        isFree: extra.isFree || item.isFree,
+        platforms: extra.platforms || item.platforms,
+        metascore: extra.metascore || item.metascore,
+        controllerSupport: extra.controllerSupport || item.controllerSupport,
+      };
+    });
+  }
+
+  function mergeSuggestSearchFields(items, searchItems) {
+    if (!searchItems?.length || !items.length) return items;
+    const byId = Object.create(null);
+    searchItems.forEach((item) => {
+      byId[item.id] = item;
+    });
+    return items.map((item) => {
+      const extra = byId[item.id];
+      if (!extra) return item;
+      return {
+        ...item,
+        type: extra.type || item.type,
+        img: item.img || extra.img,
+        priceLabel: item.priceLabel || extra.priceLabel,
+        priceOriginal: item.priceOriginal || extra.priceOriginal,
+        discountPct: item.discountPct || extra.discountPct,
+        isFree: item.isFree || extra.isFree,
+        platforms: item.platforms || extra.platforms,
+        releaseDate: extra.releaseDate || item.releaseDate || '',
+        reviewSummary: extra.reviewSummary || item.reviewSummary || '',
+        reviewPercent: extra.reviewPercent || item.reviewPercent || '',
+        reviewTone: extra.reviewTone || item.reviewTone || '',
+        reviewDetail: extra.reviewDetail || item.reviewDetail || '',
+      };
+    });
+  }
+
+  function unionSuggestItems(...lists) {
+    const seen = Object.create(null);
+    const out = [];
+    for (const list of lists) {
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        if (!item?.id || seen[item.id]) continue;
+        seen[item.id] = true;
+        out.push(item);
+      }
+    }
+    return out;
+  }
+
+  function buildBlockedAppCapsule(appId) {
+    return `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/capsule_231x87.jpg`;
+  }
+
+  function collectBlockedSuggestMatches(term) {
+    if (!settings.markBlockedInSearch && !settings.rememberBlockedApps) return [];
+    const q = String(term || '')
+      .trim()
+      .toLowerCase();
+    if (q.length < 2) return [];
+
+    const store = loadBlockedAppsStore();
+    const matches = [];
+    for (const [id, entry] of Object.entries(store)) {
+      const name = String(entry && entry.name ? entry.name : '').trim();
+      const hay = `${name} ${id}`.toLowerCase();
+      if (!hay.includes(q)) continue;
+      matches.push({
+        id: String(id),
+        name: name || `App ${id}`,
+        type: 'game',
+        img: buildBlockedAppCapsule(id),
+        ...emptySuggestItemFields(),
+      });
+    }
+    return matches;
+  }
+
+  function trimSuggestItems(items, mustKeepIds) {
+    if (items.length <= SUGGEST_RESULT_COUNT) return items;
+    const mustKeep = mustKeepIds instanceof Set ? mustKeepIds : new Set(mustKeepIds || []);
+    const kept = items.slice(0, SUGGEST_RESULT_COUNT);
+    const keptIds = new Set(kept.map((item) => item.id));
+    for (const item of items.slice(SUGGEST_RESULT_COUNT)) {
+      if (!mustKeep.has(item.id) || keptIds.has(item.id)) continue;
+      kept.push(item);
+      keptIds.add(item.id);
+    }
+    return kept;
   }
 
   function parseJsonResponse(text) {
@@ -2885,6 +3239,11 @@
       platforms,
       metascore,
       controllerSupport,
+      releaseDate: '',
+      reviewSummary: '',
+      reviewPercent: '',
+      reviewTone: '',
+      reviewDetail: '',
     };
   }
 
@@ -2943,16 +3302,30 @@
   async function fetchGuestSuggestions(term) {
     const token = ++suggestToken;
     updateSuggestProbeProgress(null);
-    showSuggestSkeleton();
+    showSuggestSkeleton(Math.min(8, SUGGEST_RESULT_COUNT));
 
     try {
       let items = [];
+      let storeItems = [];
+      let searchItems = [];
+      const blockedMatches = collectBlockedSuggestMatches(term);
 
-      const storeParsed = await requestGuestJson(buildStoreSearchUrl(term)).catch(() => null);
+      const [storeParsed, searchParsed] = await Promise.all([
+        requestGuestJson(buildStoreSearchUrl(term)).catch(() => null),
+        fetchSearchResultItems(term).catch(() => null),
+      ]);
       if (token !== suggestToken) return;
+
       if (storeParsed) {
-        items = normalizeSuggestItems(storeParsed.items || []);
+        storeItems = normalizeSuggestItems(storeParsed.items || []);
       }
+      if (Array.isArray(searchParsed)) {
+        searchItems = searchParsed;
+      }
+
+      // storesearch ranking keeps region-restricted titles in natural relevance order;
+      // /search/results fills the rest (Steam often hides unavailable apps from that HTML)
+      items = unionSuggestItems(storeItems, searchItems, blockedMatches);
 
       if (!items.length) {
         const suggestParsed = await requestGuestJson(buildSuggestUrl(term));
@@ -2960,12 +3333,20 @@
         items = normalizeSuggestItems(
           Array.isArray(suggestParsed) ? suggestParsed : suggestParsed.items
         );
+        items = unionSuggestItems(items, blockedMatches);
       }
 
       if (!items.length) {
         showSuggestMessage(t('suggestNoResults'));
         return;
       }
+
+      items = mergeSuggestSearchFields(items, searchItems);
+      items = mergeSuggestStoreExtras(items, storeItems);
+      items = trimSuggestItems(
+        items,
+        blockedMatches.map((item) => item.id).concat(storeItems.map((item) => item.id))
+      );
 
       items.forEach((item) => {
         if (isBlockedApp(item.id)) touchBlockedAppName(item.id, item.name);
@@ -3014,6 +3395,26 @@
     return `<div class="srbb-suggest__platforms">${chips.join('')}</div>`;
   }
 
+  function buildSuggestFactsHtml(item) {
+    const parts = [];
+    if (item.releaseDate) {
+      parts.push(`<span class="srbb-suggest__release">${escapeHtml(item.releaseDate)}</span>`);
+    }
+    if (item.reviewSummary) {
+      const toneClass = item.reviewTone ? ` srbb-suggest__review--${item.reviewTone}` : '';
+      const label =
+        item.reviewPercent
+          ? t('suggestReviews', { summary: item.reviewSummary, percent: item.reviewPercent })
+          : item.reviewSummary;
+      const title = item.reviewDetail || item.reviewSummary;
+      parts.push(
+        `<span class="srbb-suggest__review${toneClass}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`
+      );
+    }
+    if (!parts.length) return '';
+    return `<div class="srbb-suggest__facts">${parts.join('<span class="srbb-suggest__facts-sep" aria-hidden="true">·</span>')}</div>`;
+  }
+
   function buildSuggestExtrasHtml(item) {
     const chips = [];
     const typeLabel = getSuggestTypeLabel(item.type);
@@ -3055,6 +3456,7 @@
             ${buildSuggestPriceHtml(item)}
             ${buildSuggestPlatformsHtml(item)}
           </div>
+          ${buildSuggestFactsHtml(item)}
           <div class="srbb-suggest__footer">
             ${buildSuggestExtrasHtml(item)}
             <span class="srbb-suggest__id">${escapeHtml(t('suggestAppId', { id: item.id }))}</span>
@@ -3097,6 +3499,7 @@
         <div class="srbb-suggest__skel-meta">
           <div class="srbb-skel srbb-suggest__skel-line srbb-suggest__skel-line--title"></div>
           <div class="srbb-skel srbb-suggest__skel-line srbb-suggest__skel-line--sub"></div>
+          <div class="srbb-skel srbb-suggest__skel-line srbb-suggest__skel-line--facts"></div>
           <div class="srbb-suggest__skel-chips">
             <div class="srbb-skel srbb-suggest__skel-chip"></div>
             <div class="srbb-skel srbb-suggest__skel-chip"></div>
@@ -3253,6 +3656,101 @@
     );
   }
 
+  function getSearchTermFromLocation() {
+    try {
+      return new URL(location.href).searchParams.get('term') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function buildInjectedSearchRowHtml(item) {
+    const href = buildAppHref(item.id, item.name);
+    const img = item.img || buildBlockedAppCapsule(item.id);
+    const release = item.releaseDate
+      ? `<div class="search_released responsive_secondrow">${escapeHtml(item.releaseDate)}</div>`
+      : '<div class="search_released responsive_secondrow"></div>';
+    const price = item.priceLabel
+      ? `<div class="search_price_discount_combined responsive_secondrow"><div class="discount_block search_discount_block"><div class="discount_prices"><div class="discount_final_price">${escapeHtml(item.priceLabel)}</div></div></div></div>`
+      : '<div class="search_price_discount_combined responsive_secondrow"></div>';
+    return `
+      <a href="${escapeHtml(href)}" data-ds-appid="${escapeHtml(String(item.id))}" data-ds-itemkey="App_${escapeHtml(String(item.id))}" class="search_result_row ds_collapse_flag srbb-search-row--injected">
+        <div class="search_capsule"><img src="${escapeHtml(img)}" alt=""></div>
+        <div class="responsive_search_name_combined">
+          <div class="search_name ellipsis"><span class="title">${escapeHtml(item.name)}</span></div>
+          ${release}
+          ${price}
+        </div>
+      </a>
+    `;
+  }
+
+  async function injectHiddenSearchHits(token) {
+    const term = getSearchTermFromLocation().trim();
+    if (!term) return;
+
+    const rowsHost = document.querySelector('#search_resultsRows');
+    if (!rowsHost) return;
+
+    const rowById = new Map();
+    collectSearchResultApps(rowsHost).forEach((app) => {
+      if (app?.id && app.row) rowById.set(String(app.id), app.row);
+    });
+
+    let storeItems = [];
+    try {
+      const storeParsed = await requestGuestJson(buildStoreSearchUrl(term));
+      if (token !== searchPageToken) return;
+      storeItems = normalizeSuggestItems(storeParsed?.items || []);
+    } catch {
+      /* keep blocked-only injection */
+    }
+
+    const blockedMatches = collectBlockedSuggestMatches(term);
+    // storesearch first so hidden titles keep Steam's relevance ranking
+    const ranked = unionSuggestItems(storeItems, blockedMatches);
+    const missing = ranked.filter((item) => item?.id && !rowById.has(String(item.id)));
+    if (!missing.length) return;
+
+    for (const item of missing) {
+      if (token !== searchPageToken) return;
+      const id = String(item.id);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = buildInjectedSearchRowHtml(item).trim();
+      const row = wrap.firstElementChild;
+      if (!row) continue;
+
+      const itemRank = ranked.findIndex((entry) => String(entry.id) === id);
+      let inserted = false;
+      for (let j = itemRank + 1; j < ranked.length; j += 1) {
+        const anchor = rowById.get(String(ranked[j].id));
+        if (anchor && anchor.parentNode === rowsHost) {
+          rowsHost.insertBefore(row, anchor);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        let prev = null;
+        for (let j = itemRank - 1; j >= 0; j -= 1) {
+          const candidate = rowById.get(String(ranked[j].id));
+          if (candidate && candidate.parentNode === rowsHost) {
+            prev = candidate;
+            break;
+          }
+        }
+        if (prev) {
+          prev.after(row);
+        } else {
+          const firstExisting = rowsHost.querySelector('a.search_result_row, .search_result_row');
+          if (firstExisting) rowsHost.insertBefore(row, firstExisting);
+          else rowsHost.appendChild(row);
+        }
+      }
+      rowById.set(id, row);
+    }
+  }
+
   function decorateBlockedSearchResults(root = document) {
     if (!settings.markBlockedInSearch || !getBlockedAppsCount()) return;
 
@@ -3260,9 +3758,12 @@
       '#search_resultsRows .search_result_row, a.search_result_row, .search_result_row'
     );
     rows.forEach((row) => {
+      const rawDsId = String(row.getAttribute('data-ds-appid') || '')
+        .split(',')[0]
+        .trim();
       const link =
         row.matches('a[href*="/app/"]') ? row : row.querySelector('a[href*="/app/"]');
-      const appId = link ? getAppIdFromUrl(link.href) : null;
+      const appId = rawDsId || (link ? getAppIdFromUrl(link.href) : null);
       if (!appId || !isBlockedApp(appId)) return;
       if (row.querySelector('.srbb-blocked-mark')) return;
 
@@ -3281,11 +3782,16 @@
       '#search_resultsRows .search_result_row, a.search_result_row, .search_result_row'
     );
     const apps = [];
+    const seen = Object.create(null);
     rows.forEach((row) => {
+      const rawDsId = String(row.getAttribute('data-ds-appid') || '')
+        .split(',')[0]
+        .trim();
       const link =
         row.matches('a[href*="/app/"]') ? row : row.querySelector('a[href*="/app/"]');
-      const appId = link ? getAppIdFromUrl(link.href) : null;
-      if (!appId) return;
+      const appId = rawDsId || (link ? getAppIdFromUrl(link.href) : null);
+      if (!appId || seen[appId]) return;
+      seen[appId] = true;
       const name =
         row.querySelector('.title, .search_name, .search_title, .col.search_name')?.textContent?.trim() ||
         '';
@@ -3403,10 +3909,14 @@
     banner.innerHTML = `
       <span class="srbb-search-banner__badge">${escapeHtml(t('badge'))}</span>
       <span class="srbb-search-banner__text">${escapeHtml(t('searchPageBanner'))}</span>
+      <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="search-settings">${escapeHtml(t('searchPageBannerSettings'))}</button>
       <button type="button" class="srbb-btn srbb-btn--ghost srbb-search-banner__reload" data-srbb="search-reload">${escapeHtml(t('reload'))}</button>
     `;
     banner.querySelector('[data-srbb="search-reload"]')?.addEventListener('click', () => {
       loadGuestSearchPage({ forceRefresh: true });
+    });
+    banner.querySelector('[data-srbb="search-settings"]')?.addEventListener('click', () => {
+      openSearchSettings();
     });
     mount.insertAdjacentElement('beforebegin', banner);
   }
@@ -3525,6 +4035,8 @@
       currentRoot.hidden = false;
       currentRoot.replaceWith(document.importNode(remoteRoot, true));
       ensureSearchBanner(findLiveSearchResultsRoot()?.parentElement || mount.parentElement);
+      await injectHiddenSearchHits(token);
+      if (token !== searchPageToken) return;
       decorateBlockedSearchResults();
       void probeSearchPageBlocked(token);
     } catch (err) {
@@ -4443,8 +4955,39 @@
         box-shadow: 0 8px 24px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
         overflow: hidden;
       }
+      .srbb-suggest__notice {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(0,0,0,.55);
+        background: linear-gradient(90deg, rgba(27,55,8,.45), rgba(27,40,56,.92));
+        font: 11px/1.35 "Motiva Sans", Arial, Helvetica, sans-serif;
+      }
+      .srbb-suggest__notice-text {
+        color: #c7d5e0;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .srbb-suggest__notice-btn {
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 3px 8px;
+        border: 1px solid #000;
+        border-radius: 2px;
+        background: linear-gradient(to bottom, #67c1f5 5%, #417a9b 95%);
+        color: #fff;
+        font: 10px/1.2 "Motiva Sans", Arial, Helvetica, sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .srbb-suggest__notice-btn:hover {
+        filter: brightness(1.08);
+      }
       .srbb-suggest__inner {
-        max-height: min(420px, 60vh);
+        max-height: min(560px, 70vh);
         overflow-y: auto;
       }
       .srbb-suggest__message {
@@ -4501,6 +5044,7 @@
       .srbb-suggest__skel-line { height: 12px; }
       .srbb-suggest__skel-line--title { width: 58%; }
       .srbb-suggest__skel-line--sub { width: 34%; height: 10px; }
+      .srbb-suggest__skel-line--facts { width: 48%; height: 10px; }
       .srbb-suggest__skel-chips {
         display: flex;
         gap: 6px;
@@ -4626,6 +5170,32 @@
         gap: 10px;
         flex-wrap: wrap;
       }
+      .srbb-suggest__facts {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        color: #8f98a0;
+        font-size: 11px;
+        line-height: 1.3;
+      }
+      .srbb-suggest__facts-sep {
+        color: #626366;
+      }
+      .srbb-suggest__release {
+        color: #8f98a0;
+      }
+      .srbb-suggest__review {
+        font-weight: 600;
+        color: #8f98a0;
+      }
+      .srbb-suggest__review--positive { color: #66c0f4; }
+      .srbb-suggest__review--mixed { color: #b9a404; }
+      .srbb-suggest__review--negative { color: #c35c5c; }
+      .srbb-suggest__item:hover .srbb-suggest__release,
+      .srbb-suggest__item.is-active .srbb-suggest__release {
+        color: #acb2b8;
+      }
       .srbb-suggest__prices {
         display: inline-flex;
         align-items: center;
@@ -4729,7 +5299,7 @@
         letter-spacing: .04em;
       }
       .srbb-search-banner__text { flex: 1 1 auto; }
-      .srbb-search-banner__reload { margin-left: auto; }
+      .srbb-search-banner__reload { margin-left: 0; }
 
       .srbb-search-status {
         margin: 12px 0;

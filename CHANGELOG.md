@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-07-13
+
+### Changed
+
+- **Guest search** is enabled by default (existing installs are migrated on once)
+- Suggest dropdown and `/search` banner explain that Region Bypass guest search is active and link to **Settings → Search** to disable it
+
+## [1.14.3] - 2026-07-13
+
+### Fixed
+
+- Region-blocked search hits no longer sink to the bottom — list order follows `storesearch` relevance again, and hidden `/search` rows are inserted at their ranked positions (still no reshuffle after probes)
+
+## [1.14.2] - 2026-07-13
+
+### Fixed
+
+- Guest search no longer reorders results after region-block probes (badges update in place; blocked titles stay in their original positions)
+
+## [1.14.1] - 2026-07-13
+
+### Fixed
+
+- Region-blocked games missing from guest search after switching suggest to `/search/results` — Steam search HTML hides unavailable titles; results now union `storesearch` + remembered blocked matches, and the `/search` page re-injects those hits
+
+## [1.14.0] - 2026-07-13
+
+### Changed
+
+- Guest search suggestions now show up to **25** results (from Steam `/search/results`; previously capped at ~10 by `/api/storesearch/`)
+
+## [1.13.0] - 2026-07-13
+
+### Added
+
+- Guest search suggestions now show **release date** and **user review summary** (e.g. Very Positive · 94%), merged from anonymous `/search/results` metadata
+
 ## [1.12.0] - 2026-07-12
 
 ### Removed

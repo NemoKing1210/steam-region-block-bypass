@@ -1,6 +1,6 @@
 {
   "name": "steam-region-block-bypass",
-  "version": "1.12.0",
+  "version": "1.15.0",
   "private": true,
   "type": "module",
   "description": "Violentmonkey/Tampermonkey userscript for Steam region-blocked app pages and optional guest search; includes optional local proxy gateway",
