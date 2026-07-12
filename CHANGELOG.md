@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.3] - 2026-07-13
+
+### Changed
+
+- Blocked games on the `/search` page now use the same highlight treatment as suggest rows (red-tinted background + capsule outline), not only the badge
+
+## [1.16.2] - 2026-07-13
+
+### Added
+
+- **View list** button in Settings → Search for saved blocked games, with links to their Steam store pages
+
+## [1.16.1] - 2026-07-13
+
+### Fixed
+
+- Search-page banner **Settings** button now opens the Region Bypass panel (click was immediately closed by the outside-click handler)
+
+## [1.16.0] - 2026-07-13
+
+### Added
+
+- Separate **Guest `/search` page** setting (off by default) so header suggestions and full search-page guest inject can be toggled independently
+
+### Fixed
+
+- Guest `/search` page no longer loops reload/probe after DOM inject (MutationObserver remounts used to cancel probes at ~3–5 and hang at 0)
+
 ## [1.15.0] - 2026-07-13
 
 ### Changed

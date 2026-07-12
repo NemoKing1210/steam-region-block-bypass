@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.15.0
+// @version           1.16.3
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -70,8 +70,10 @@
     autoBypass: true, // true = replace immediately; false = show button
     /** Guest HTML TTL in minutes; 0 disables caching */
     cacheMinutes: 60,
-    /** Guest search: anonymous suggest dropdown + /search results */
+    /** Guest search: anonymous suggest dropdown in the header */
     searchUnblocked: true,
+    /** Guest /search page: anonymous refetch + inject (opt-in; off by default) */
+    searchPageUnblocked: false,
     /** Remember app IDs when Steam shows a region block */
     rememberBlockedApps: true,
     /** Highlight remembered blocked apps in guest search */
@@ -169,9 +171,12 @@
       cacheMinutes: 'Cache duration (minutes)',
       cacheMinutesHint:
         'How long to reuse a successful guest page before refetching. 0 disables cache. Reload always fetches fresh.',
-      searchUnblocked: 'Guest search',
+      searchUnblocked: 'Guest search suggestions',
       searchUnblockedHint:
-        'Search suggestions and /search results are fetched without account cookies (same guest stack as app bypass). On by default.',
+        'Header search suggestions are fetched without account cookies (same guest stack as app bypass). On by default.',
+      searchPageUnblocked: 'Guest /search page',
+      searchPageUnblockedHint:
+        'Replace Steam /search results with an anonymous guest fetch. Off by default — enable if you need region-blocked titles on the full search page.',
       suggestGuestNotice:
         'Region Bypass guest search is on — results load without account cookies and can show region-blocked titles.',
       suggestGuestSettings: 'Disable in Settings → Search',
@@ -210,6 +215,10 @@
       probeNeedLogin: 'Sign in to Steam to auto-detect blocked games.',
       probeNeedRemember: 'Turn on “Remember blocked games” to save auto-detected apps.',
       blockedAppsCount: '{count} blocked games saved',
+      viewBlockedApps: 'View list',
+      hideBlockedApps: 'Hide list',
+      blockedAppsEmpty: 'No blocked games saved yet.',
+      blockedAppUntitled: 'App {id}',
       clearBlockedApps: 'Clear list',
       searchPageLoading: 'Loading search results without account cookies…',
       searchPageBanner: 'Guest search via Region Bypass (anonymous fetch)',
@@ -275,9 +284,12 @@
       cacheMinutes: 'Время кеша (минуты)',
       cacheMinutesHint:
         'Как долго повторно использовать успешно загруженную гостевую страницу. 0 отключает кеш. «Обновить» всегда запрашивает заново.',
-      searchUnblocked: 'Гостевой поиск',
+      searchUnblocked: 'Гостевые подсказки поиска',
       searchUnblockedHint:
-        'Подсказки и результаты /search запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений). Включён по умолчанию.',
+        'Подсказки в шапке запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений). Включены по умолчанию.',
+      searchPageUnblocked: 'Гостевая страница /search',
+      searchPageUnblockedHint:
+        'Подменяет результаты Steam /search анонимным гостевым запросом. Выключено по умолчанию — включите, если нужны регионально заблокированные игры на полной странице поиска.',
       suggestGuestNotice:
         'Включён гостевой поиск Region Bypass — результаты без cookies аккаунта, видны и регионально заблокированные игры.',
       suggestGuestSettings: 'Отключить: Настройки → Поиск',
@@ -316,6 +328,10 @@
       probeNeedLogin: 'Войдите в Steam, чтобы автоматически находить заблокированные игры.',
       probeNeedRemember: 'Включите «Запоминать заблокированные игры», чтобы сохранять найденные.',
       blockedAppsCount: 'Сохранено заблокированных игр: {count}',
+      viewBlockedApps: 'Посмотреть',
+      hideBlockedApps: 'Скрыть',
+      blockedAppsEmpty: 'Пока нет сохранённых заблокированных игр.',
+      blockedAppUntitled: 'Приложение {id}',
       clearBlockedApps: 'Очистить список',
       searchPageLoading: 'Загрузка результатов поиска без cookies аккаунта…',
       searchPageBanner: 'Гостевой поиск Region Bypass (анонимный запрос)',
@@ -376,8 +392,10 @@
       storeCountryHint: '可选：覆盖访客请求的 Steam 商店国家/地区。',
       cacheMinutes: '缓存时长（分钟）',
       cacheMinutesHint: '成功的访客页面在重新请求前可复用多久。0 禁用缓存。「重新加载」始终获取最新内容。',
-      searchUnblocked: '访客搜索',
-      searchUnblockedHint: '搜索建议和 /search 结果以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。默认开启。',
+      searchUnblocked: '访客搜索建议',
+      searchUnblockedHint: '顶栏搜索建议以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。默认开启。',
+      searchPageUnblocked: '访客 /search 页面',
+      searchPageUnblockedHint: '用匿名访客请求替换 Steam /search 结果。默认关闭 — 若需要在完整搜索页看到地区受限游戏，请开启。',
       suggestGuestNotice: '已启用 Region Bypass 访客搜索 — 结果不带账号 Cookie，可显示地区受限游戏。',
       suggestGuestSettings: '在“设置 → 搜索”中关闭',
       suggestEmpty: '输入关键词以访客身份搜索商店（无账号 Cookie）',
@@ -414,6 +432,10 @@
       probeNeedLogin: '请登录 Steam 以自动检测封锁游戏。',
       probeNeedRemember: '请开启“记住被封锁的游戏”以保存自动检测结果。',
       blockedAppsCount: '已保存 {count} 个被封锁游戏',
+      viewBlockedApps: '查看列表',
+      hideBlockedApps: '隐藏列表',
+      blockedAppsEmpty: '尚未保存被封锁的游戏。',
+      blockedAppUntitled: '应用 {id}',
       clearBlockedApps: '清空列表',
       searchPageLoading: '正在以无账号 Cookie 加载搜索结果…',
       searchPageBanner: '访客搜索（Region Bypass，匿名请求）',
@@ -479,9 +501,12 @@
       cacheMinutes: 'Duración de caché (minutos)',
       cacheMinutesHint:
         'Cuánto tiempo reutilizar una página de invitado correcta antes de volver a pedirla. 0 desactiva la caché. Recargar siempre obtiene datos frescos.',
-      searchUnblocked: 'Búsqueda invitado',
+      searchUnblocked: 'Sugerencias de búsqueda invitado',
       searchUnblockedHint:
-        'Las sugerencias y los resultados de /search se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps). Activado por defecto.',
+        'Las sugerencias de la barra se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps). Activado por defecto.',
+      searchPageUnblocked: 'Página /search invitado',
+      searchPageUnblockedHint:
+        'Sustituye los resultados de Steam /search por una petición anónima de invitado. Desactivado por defecto — actívalo si necesitas títulos bloqueados por región en la página de búsqueda completa.',
       suggestGuestNotice:
         'La búsqueda invitado de Region Bypass está activa — resultados sin cookies de cuenta; pueden verse títulos bloqueados por región.',
       suggestGuestSettings: 'Desactivar en Ajustes → Búsqueda',
@@ -520,6 +545,10 @@
       probeNeedLogin: 'Inicia sesión en Steam para detectar juegos bloqueados automáticamente.',
       probeNeedRemember: 'Activa «Recordar juegos bloqueados» para guardar los detectados.',
       blockedAppsCount: '{count} juegos bloqueados guardados',
+      viewBlockedApps: 'Ver lista',
+      hideBlockedApps: 'Ocultar lista',
+      blockedAppsEmpty: 'Aún no hay juegos bloqueados guardados.',
+      blockedAppUntitled: 'App {id}',
       clearBlockedApps: 'Borrar lista',
       searchPageLoading: 'Cargando resultados de búsqueda sin cookies de cuenta…',
       searchPageBanner: 'Búsqueda invitado de Region Bypass (petición anónima)',
@@ -585,9 +614,12 @@
       cacheMinutes: 'Duração do cache (minutos)',
       cacheMinutesHint:
         'Por quanto tempo reutilizar uma página de convidado bem-sucedida antes de buscar de novo. 0 desativa o cache. Recarregar sempre busca dados novos.',
-      searchUnblocked: 'Busca convidado',
+      searchUnblocked: 'Sugestões de busca convidado',
       searchUnblockedHint:
-        'Sugestões e resultados de /search são obtidos sem cookies da conta (mesmo stack convidado do bypass de apps). Ativado por padrão.',
+        'Sugestões da barra são obtidas sem cookies da conta (mesmo stack convidado do bypass de apps). Ativado por padrão.',
+      searchPageUnblocked: 'Página /search convidado',
+      searchPageUnblockedHint:
+        'Substitui os resultados do Steam /search por uma requisição anônima de convidado. Desativado por padrão — ative se precisar de títulos bloqueados por região na página de busca completa.',
       suggestGuestNotice:
         'Busca convidado do Region Bypass ativa — resultados sem cookies da conta; títulos bloqueados por região podem aparecer.',
       suggestGuestSettings: 'Desativar em Configurações → Busca',
@@ -626,6 +658,10 @@
       probeNeedLogin: 'Entre na Steam para detectar jogos bloqueados automaticamente.',
       probeNeedRemember: 'Ative «Lembrar jogos bloqueados» para salvar os detectados.',
       blockedAppsCount: '{count} jogos bloqueados salvos',
+      viewBlockedApps: 'Ver lista',
+      hideBlockedApps: 'Ocultar lista',
+      blockedAppsEmpty: 'Nenhum jogo bloqueado salvo ainda.',
+      blockedAppUntitled: 'App {id}',
       clearBlockedApps: 'Limpar lista',
       searchPageLoading: 'Carregando resultados da busca sem cookies da conta…',
       searchPageBanner: 'Busca convidado do Region Bypass (requisição anônima)',
@@ -691,9 +727,12 @@
       cacheMinutes: 'Cache-Dauer (Minuten)',
       cacheMinutesHint:
         'Wie lange eine erfolgreiche Gastseite wiederverwendet wird, bevor neu geladen wird. 0 deaktiviert den Cache. Neu laden holt immer frische Daten.',
-      searchUnblocked: 'Gast-Suche',
+      searchUnblocked: 'Gast-Suchvorschläge',
       searchUnblockedHint:
-        'Suchvorschläge und /search-Ergebnisse werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass). Standardmäßig aktiv.',
+        'Suchvorschläge in der Kopfzeile werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass). Standardmäßig aktiv.',
+      searchPageUnblocked: 'Gast-/search-Seite',
+      searchPageUnblockedHint:
+        'Ersetzt Steam-/search-Ergebnisse durch einen anonymen Gastabruf. Standardmäßig aus — aktivieren, wenn regional gesperrte Titel auf der vollständigen Suchseite nötig sind.',
       suggestGuestNotice:
         'Region-Bypass-Gast-Suche ist aktiv — Ergebnisse ohne Account-Cookies; regional gesperrte Titel können erscheinen.',
       suggestGuestSettings: 'Deaktivieren unter Einstellungen → Suche',
@@ -732,6 +771,10 @@
       probeNeedLogin: 'Melden Sie sich bei Steam an, um gesperrte Spiele automatisch zu erkennen.',
       probeNeedRemember: 'Aktivieren Sie „Gesperrte Spiele merken“, um erkannte Apps zu speichern.',
       blockedAppsCount: '{count} gesperrte Spiele gespeichert',
+      viewBlockedApps: 'Liste anzeigen',
+      hideBlockedApps: 'Liste ausblenden',
+      blockedAppsEmpty: 'Noch keine gesperrten Spiele gespeichert.',
+      blockedAppUntitled: 'App {id}',
       clearBlockedApps: 'Liste leeren',
       searchPageLoading: 'Suchergebnisse werden ohne Account-Cookies geladen…',
       searchPageBanner: 'Gast-Suche von Region Bypass (anonymer Abruf)',
@@ -797,9 +840,12 @@
       cacheMinutes: 'Durée du cache (minutes)',
       cacheMinutesHint:
         'Combien de temps réutiliser une page invité réussie avant de la redemander. 0 désactive le cache. Recharger récupère toujours des données fraîches.',
-      searchUnblocked: 'Recherche invité',
+      searchUnblocked: 'Suggestions de recherche invité',
       searchUnblockedHint:
-        'Les suggestions et résultats /search sont récupérés sans cookies de compte (même pile invité que le bypass d’apps). Activé par défaut.',
+        'Les suggestions de la barre sont récupérées sans cookies de compte (même pile invité que le bypass d’apps). Activé par défaut.',
+      searchPageUnblocked: 'Page /search invité',
+      searchPageUnblockedHint:
+        'Remplace les résultats Steam /search par une requête anonyme invité. Désactivé par défaut — activez si vous avez besoin des titres bloqués par région sur la page de recherche complète.',
       suggestGuestNotice:
         'Recherche invité Region Bypass active — résultats sans cookies de compte ; les titres bloqués par région peuvent apparaître.',
       suggestGuestSettings: 'Désactiver dans Paramètres → Recherche',
@@ -838,6 +884,10 @@
       probeNeedLogin: 'Connectez-vous à Steam pour détecter automatiquement les jeux bloqués.',
       probeNeedRemember: 'Activez « Mémoriser les jeux bloqués » pour enregistrer les détections.',
       blockedAppsCount: '{count} jeux bloqués enregistrés',
+      viewBlockedApps: 'Voir la liste',
+      hideBlockedApps: 'Masquer la liste',
+      blockedAppsEmpty: 'Aucun jeu bloqué enregistré pour le moment.',
+      blockedAppUntitled: 'App {id}',
       clearBlockedApps: 'Vider la liste',
       searchPageLoading: 'Chargement des résultats sans cookies de compte…',
       searchPageBanner: 'Recherche invité Region Bypass (requête anonyme)',
@@ -902,9 +952,12 @@
       cacheMinutes: 'キャッシュ時間（分）',
       cacheMinutesHint:
         '成功したゲストページを再取得するまでの保持時間。0でキャッシュ無効。「再読み込み」は常に最新を取得します。',
-      searchUnblocked: 'ゲスト検索',
+      searchUnblocked: 'ゲスト検索候補',
       searchUnblockedHint:
-        '検索候補と /search 結果をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。デフォルトでオン。',
+        'ヘッダーの検索候補をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。デフォルトでオン。',
+      searchPageUnblocked: 'ゲスト /search ページ',
+      searchPageUnblockedHint:
+        'Steam の /search 結果を匿名ゲスト取得で置き換えます。デフォルトはオフ — 検索ページ全体で地域制限タイトルが必要な場合にオンにしてください。',
       suggestGuestNotice:
         'Region Bypass のゲスト検索が有効です — アカウントCookieなしで取得し、地域制限タイトルも表示できます。',
       suggestGuestSettings: '設定 → 検索 で無効化',
@@ -942,6 +995,10 @@
       probeNeedLogin: 'ブロックゲームを自動検出するには Steam にログインしてください。',
       probeNeedRemember: '検出結果を保存するには「ブロックされたゲームを記憶」をオンにしてください。',
       blockedAppsCount: '保存済みブロックゲーム: {count}',
+      viewBlockedApps: '一覧を表示',
+      hideBlockedApps: '一覧を隠す',
+      blockedAppsEmpty: '保存されたブロックゲームはまだありません。',
+      blockedAppUntitled: 'アプリ {id}',
       clearBlockedApps: 'リストを消去',
       searchPageLoading: 'アカウントCookieなしで検索結果を読み込み中…',
       searchPageBanner: 'Region Bypass ゲスト検索（匿名取得）',
@@ -1006,9 +1063,12 @@
       cacheMinutes: '캐시 유지 시간(분)',
       cacheMinutesHint:
         '성공한 게스트 페이지를 다시 요청하기 전까지 얼마나 재사용할지. 0이면 캐시 비활성. 「다시 불러오기」는 항상 새로 가져옵니다.',
-      searchUnblocked: '게스트 검색',
+      searchUnblocked: '게스트 검색 제안',
       searchUnblockedHint:
-        '검색 제안과 /search 결과를 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택). 기본으로 켜짐.',
+        '헤더 검색 제안을 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택). 기본으로 켜짐.',
+      searchPageUnblocked: '게스트 /search 페이지',
+      searchPageUnblockedHint:
+        'Steam /search 결과를 익명 게스트 요청으로 바꿉니다. 기본은 꺼짐 — 전체 검색 페이지에서 지역 제한 타이틀이 필요하면 켜세요.',
       suggestGuestNotice:
         'Region Bypass 게스트 검색이 켜져 있습니다 — 계정 쿠키 없이 결과를 가져오며 지역 제한 타이틀도 보일 수 있습니다.',
       suggestGuestSettings: '설정 → 검색에서 끄기',
@@ -1046,6 +1106,10 @@
       probeNeedLogin: '차단 게임을 자동 감지하려면 Steam에 로그인하세요.',
       probeNeedRemember: '감지 결과를 저장하려면 «차단된 게임 기억»을 켜세요.',
       blockedAppsCount: '저장된 차단 게임 {count}개',
+      viewBlockedApps: '목록 보기',
+      hideBlockedApps: '목록 숨기기',
+      blockedAppsEmpty: '저장된 차단 게임이 아직 없습니다.',
+      blockedAppUntitled: '앱 {id}',
       clearBlockedApps: '목록 지우기',
       searchPageLoading: '계정 쿠키 없이 검색 결과를 불러오는 중…',
       searchPageBanner: 'Region Bypass 게스트 검색(익명 요청)',
@@ -1111,9 +1175,12 @@
       cacheMinutes: 'Czas pamięci podręcznej (minuty)',
       cacheMinutesHint:
         'Jak długo ponownie używać udanej strony gościa przed ponownym pobraniem. 0 wyłącza cache. Odśwież zawsze pobiera świeże dane.',
-      searchUnblocked: 'Wyszukiwanie gościa',
+      searchUnblocked: 'Podpowiedzi wyszukiwania gościa',
       searchUnblockedHint:
-        'Podpowiedzi i wyniki /search są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji). Domyślnie włączone.',
+        'Podpowiedzi w nagłówku są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji). Domyślnie włączone.',
+      searchPageUnblocked: 'Strona /search gościa',
+      searchPageUnblockedHint:
+        'Zastępuje wyniki Steam /search anonimowym pobraniem gościa. Domyślnie wyłączone — włącz, jeśli potrzebujesz tytułów zablokowanych regionalnie na pełnej stronie wyszukiwania.',
       suggestGuestNotice:
         'Wyszukiwanie gościa Region Bypass jest włączone — wyniki bez cookies konta; mogą być widoczne tytuły zablokowane regionalnie.',
       suggestGuestSettings: 'Wyłącz w Ustawienia → Wyszukiwanie',
@@ -1152,6 +1219,10 @@
       probeNeedLogin: 'Zaloguj się do Steam, aby automatycznie wykrywać zablokowane gry.',
       probeNeedRemember: 'Włącz «Zapamiętuj zablokowane gry», aby zapisywać wykryte pozycje.',
       blockedAppsCount: 'Zapisane zablokowane gry: {count}',
+      viewBlockedApps: 'Pokaż listę',
+      hideBlockedApps: 'Ukryj listę',
+      blockedAppsEmpty: 'Brak zapisanych zablokowanych gier.',
+      blockedAppUntitled: 'Aplikacja {id}',
       clearBlockedApps: 'Wyczyść listę',
       searchPageLoading: 'Ładowanie wyników wyszukiwania bez cookies konta…',
       searchPageBanner: 'Wyszukiwanie gościa Region Bypass (anonimowe pobranie)',
@@ -1260,6 +1331,8 @@
   let activeSuggestIndex = -1;
   let searchPageToken = 0;
   let searchPageDebounceTimer = null;
+  /** href last successfully loaded by guest /search inject (avoids MutationObserver reload loops) */
+  let searchPageLoadedHref = '';
   let historyHooked = false;
   /** @type {Set<string> | null} */
   let blockedAppsIndex = null;
@@ -1320,15 +1393,23 @@
 
   function saveSettings(next) {
     const prevSearch = settings.searchUnblocked;
+    const prevSearchPage = settings.searchPageUnblocked;
     settings = { ...settings, ...next };
     settings.cacheMinutes = normalizeCacheMinutes(settings.cacheMinutes);
     settings.probeBlockedScope = normalizeProbeScope(settings.probeBlockedScope);
     settings.probeBlockedConcurrency = normalizeProbeConcurrency(settings.probeBlockedConcurrency);
     GM_setValue(STORAGE_KEY, settings);
     updateButtonState();
-    if ('searchUnblocked' in next && prevSearch !== settings.searchUnblocked) {
+    const searchChanged =
+      ('searchUnblocked' in next && prevSearch !== settings.searchUnblocked) ||
+      ('searchPageUnblocked' in next && prevSearchPage !== settings.searchPageUnblocked);
+    if (searchChanged) {
       syncSearchGuestMode();
       syncSearchPanelToggle();
+      if (settings.searchPageUnblocked && isSearchPage()) {
+        searchPageLoadedHref = '';
+        scheduleGuestSearchReload({ immediate: true });
+      }
     }
   }
 
@@ -1461,6 +1542,18 @@
     return getBlockedAppIds().size;
   }
 
+  /** @returns {Array<{id:string,name:string,at:number}>} newest first */
+  function listBlockedAppsEntries() {
+    const store = pruneBlockedAppsStore(loadBlockedAppsStore());
+    return Object.entries(store)
+      .map(([id, entry]) => ({
+        id,
+        name: String(entry?.name || '').trim(),
+        at: typeof entry?.at === 'number' ? entry.at : 0,
+      }))
+      .sort((a, b) => b.at - a.at);
+  }
+
   function isBlockedApp(appId) {
     if (!appId) return false;
     return getBlockedAppIds().has(String(appId));
@@ -1495,6 +1588,11 @@
   function clearBlockedApps() {
     GM_setValue(BLOCKED_APPS_STORAGE_KEY, {});
     invalidateBlockedAppsIndex();
+    const listEl = document.getElementById('srbb-blocked-list');
+    if (listEl) {
+      listEl.hidden = true;
+      listEl.innerHTML = '';
+    }
     syncBlockedAppsPanel();
   }
 
@@ -2535,7 +2633,7 @@
     observeSearchHeader();
     hookHistoryForSearch();
     syncSearchGuestMode();
-    if (settings.searchUnblocked && isSearchPage()) {
+    if (settings.searchPageUnblocked && isSearchPage()) {
       scheduleGuestSearchReload();
     }
   }
@@ -2622,8 +2720,10 @@
 
   function openSearchSettings() {
     hideSuggestDropdown();
-    togglePanel(true);
-    switchPanelTab('search');
+    void ensureSettingsButton().then(() => {
+      togglePanel(true);
+      switchPanelTab('search');
+    });
   }
 
   function updateSuggestProbeProgress(progress) {
@@ -2778,19 +2878,37 @@
   }
 
   function syncSearchGuestMode() {
-    const on = !!settings.searchUnblocked;
-    document.documentElement.classList.toggle('srbb-search-guest', on);
+    const suggestOn = !!settings.searchUnblocked;
+    const pageOn = !!settings.searchPageUnblocked;
+    document.documentElement.classList.toggle('srbb-search-guest', suggestOn);
+    document.documentElement.classList.toggle('srbb-search-page-guest', pageOn);
     document.getElementById('srbb-search-toggle')?.remove();
 
-    if (!on) {
+    if (!suggestOn) {
       hideSuggestDropdown();
-      document.getElementById('srbb-search-banner')?.remove();
-      document.getElementById('srbb-search-skel')?.remove();
-      return;
     }
 
-    if (isSearchPage()) {
-      scheduleGuestSearchReload();
+    if (!pageOn) {
+      const hadGuestPage =
+        !!searchPageLoadedHref ||
+        !!searchPageDebounceTimer ||
+        !!document.getElementById('srbb-search-banner') ||
+        !!document.getElementById('srbb-search-skel') ||
+        !!document.getElementById('srbb-search-probe');
+      if (hadGuestPage) {
+        searchPageToken += 1;
+        searchPageLoadedHref = '';
+        if (searchPageDebounceTimer) {
+          window.clearTimeout(searchPageDebounceTimer);
+          searchPageDebounceTimer = null;
+        }
+      }
+      document.getElementById('srbb-search-banner')?.remove();
+      document.getElementById('srbb-search-skel')?.remove();
+      document.getElementById('srbb-search-status')?.remove();
+      document.getElementById('srbb-search-probe')?.remove();
+      const liveRoot = findLiveSearchResultsRoot();
+      if (liveRoot) liveRoot.hidden = false;
     }
   }
 
@@ -2803,6 +2921,13 @@
     if (pill) {
       pill.textContent = settings.searchUnblocked ? t('on') : t('off');
       pill.classList.toggle('is-on', !!settings.searchUnblocked);
+    }
+    const pageCb = panel.querySelector('#srbb-search-page-unblocked');
+    const pagePill = panel.querySelector('#srbb-search-page-pill');
+    if (pageCb) pageCb.checked = !!settings.searchPageUnblocked;
+    if (pagePill) {
+      pagePill.textContent = settings.searchPageUnblocked ? t('on') : t('off');
+      pagePill.classList.toggle('is-on', !!settings.searchPageUnblocked);
     }
     syncProbePanelState();
   }
@@ -3617,7 +3742,9 @@
   }
 
   function scheduleGuestSearchReload(options = {}) {
-    if (!settings.searchUnblocked || !isSearchPage()) return;
+    if (!settings.searchPageUnblocked || !isSearchPage()) return;
+    const forceRefresh = !!options.forceRefresh;
+    if (!forceRefresh && location.href === searchPageLoadedHref) return;
     if (searchPageDebounceTimer) window.clearTimeout(searchPageDebounceTimer);
     searchPageDebounceTimer = window.setTimeout(() => {
       loadGuestSearchPage(options);
@@ -3765,6 +3892,7 @@
         row.matches('a[href*="/app/"]') ? row : row.querySelector('a[href*="/app/"]');
       const appId = rawDsId || (link ? getAppIdFromUrl(link.href) : null);
       if (!appId || !isBlockedApp(appId)) return;
+      row.classList.add('srbb-search-row--blocked');
       if (row.querySelector('.srbb-blocked-mark')) return;
 
       const mark = document.createElement('span');
@@ -3773,7 +3901,6 @@
       const title = row.querySelector('.title, .search_name, .search_title, .col.search_name');
       if (title) title.appendChild(mark);
       else row.appendChild(mark);
-      row.classList.add('srbb-search-row--blocked');
     });
   }
 
@@ -3912,10 +4039,14 @@
       <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="search-settings">${escapeHtml(t('searchPageBannerSettings'))}</button>
       <button type="button" class="srbb-btn srbb-btn--ghost srbb-search-banner__reload" data-srbb="search-reload">${escapeHtml(t('reload'))}</button>
     `;
-    banner.querySelector('[data-srbb="search-reload"]')?.addEventListener('click', () => {
+    banner.querySelector('[data-srbb="search-reload"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       loadGuestSearchPage({ forceRefresh: true });
     });
-    banner.querySelector('[data-srbb="search-settings"]')?.addEventListener('click', () => {
+    banner.querySelector('[data-srbb="search-settings"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       openSearchSettings();
     });
     mount.insertAdjacentElement('beforebegin', banner);
@@ -3966,9 +4097,10 @@
   }
 
   async function loadGuestSearchPage(options = {}) {
-    if (!settings.searchUnblocked || !isSearchPage()) return;
+    if (!settings.searchPageUnblocked || !isSearchPage()) return;
 
     const forceRefresh = !!options.forceRefresh;
+    if (forceRefresh) searchPageLoadedHref = '';
     const token = ++searchPageToken;
     const mount = findLiveSearchResultsRoot() || getContentMount();
     if (!mount) return;
@@ -4017,6 +4149,7 @@
         }
         statusEl.textContent = t('searchPageNoContent');
         statusEl.dataset.kind = 'error';
+        searchPageLoadedHref = location.href;
         return;
       }
 
@@ -4038,6 +4171,8 @@
       await injectHiddenSearchHits(token);
       if (token !== searchPageToken) return;
       decorateBlockedSearchResults();
+      // Mark before probe/DOM tweaks so MutationObserver remounts do not re-fetch
+      searchPageLoadedHref = location.href;
       void probeSearchPageBlocked(token);
     } catch (err) {
       if (token !== searchPageToken) return;
@@ -4176,6 +4311,16 @@
 
           <div class="srbb-panel__section srbb-panel__section--row">
             <label class="srbb-switch">
+              <input type="checkbox" id="srbb-search-page-unblocked" />
+              <span class="srbb-switch__track"></span>
+              <span class="srbb-switch__label">${escapeHtml(t('searchPageUnblocked'))}</span>
+            </label>
+            <span class="srbb-pill" id="srbb-search-page-pill">${escapeHtml(t('off'))}</span>
+          </div>
+          <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('searchPageUnblockedHint'))}</p>
+
+          <div class="srbb-panel__section srbb-panel__section--row">
+            <label class="srbb-switch">
               <input type="checkbox" id="srbb-remember-blocked" />
               <span class="srbb-switch__track"></span>
               <span class="srbb-switch__label">${escapeHtml(t('rememberBlockedApps'))}</span>
@@ -4225,8 +4370,10 @@
 
           <div class="srbb-panel__section srbb-panel__section--row">
             <span class="srbb-blocked-count" id="srbb-blocked-count"></span>
+            <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="view-blocked">${escapeHtml(t('viewBlockedApps'))}</button>
             <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="clear-blocked">${escapeHtml(t('clearBlockedApps'))}</button>
           </div>
+          <div class="srbb-blocked-list" id="srbb-blocked-list" hidden></div>
         </div>
 
         <div class="srbb-panel__tabpane" data-srbb-pane="proxy" role="tabpanel" hidden>
@@ -4309,6 +4456,11 @@
     panel.querySelector('#srbb-search-unblocked')?.addEventListener('change', () => {
       saveSettings({ searchUnblocked: panel.querySelector('#srbb-search-unblocked').checked });
     });
+    panel.querySelector('#srbb-search-page-unblocked')?.addEventListener('change', () => {
+      saveSettings({
+        searchPageUnblocked: panel.querySelector('#srbb-search-page-unblocked').checked,
+      });
+    });
     panel.querySelector('#srbb-remember-blocked')?.addEventListener('change', () => {
       saveSettings({ rememberBlockedApps: panel.querySelector('#srbb-remember-blocked').checked });
       syncBlockedAppsPanel();
@@ -4332,11 +4484,19 @@
     panel.querySelector('[data-srbb="clear-blocked"]')?.addEventListener('click', () => {
       clearBlockedApps();
     });
+    panel.querySelector('[data-srbb="view-blocked"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleBlockedAppsList();
+    });
 
     document.addEventListener('click', (e) => {
       if (!panelOpen) return;
       const btn = document.getElementById('srbb-settings-btn');
       if (panel.contains(e.target) || btn?.contains(e.target)) return;
+      if (e.target.closest?.('[data-srbb="search-settings"], [data-srbb="suggest-settings"], [data-srbb="open-settings"]')) {
+        return;
+      }
       togglePanel(false);
     });
     document.addEventListener('keydown', (e) => {
@@ -4384,11 +4544,61 @@
     const mark = panel.querySelector('#srbb-mark-blocked-search');
     const countEl = panel.querySelector('#srbb-blocked-count');
     const clearBtn = panel.querySelector('[data-srbb="clear-blocked"]');
+    const viewBtn = panel.querySelector('[data-srbb="view-blocked"]');
+    const listEl = panel.querySelector('#srbb-blocked-list');
     if (remember) remember.checked = !!settings.rememberBlockedApps;
     if (mark) mark.checked = !!settings.markBlockedInSearch;
     const count = getBlockedAppsCount();
     if (countEl) countEl.textContent = t('blockedAppsCount', { count });
     if (clearBtn) clearBtn.disabled = count === 0;
+    if (viewBtn) viewBtn.disabled = count === 0;
+    if (listEl && !listEl.hidden) {
+      renderBlockedAppsList(listEl);
+    }
+    if (viewBtn && listEl) {
+      viewBtn.textContent = listEl.hidden ? t('viewBlockedApps') : t('hideBlockedApps');
+    }
+  }
+
+  function toggleBlockedAppsList() {
+    const panel = document.getElementById('srbb-panel');
+    const listEl = panel?.querySelector('#srbb-blocked-list');
+    const viewBtn = panel?.querySelector('[data-srbb="view-blocked"]');
+    if (!listEl) return;
+    if (getBlockedAppsCount() === 0) {
+      listEl.hidden = true;
+      listEl.innerHTML = '';
+      if (viewBtn) {
+        viewBtn.disabled = true;
+        viewBtn.textContent = t('viewBlockedApps');
+      }
+      return;
+    }
+    listEl.hidden = !listEl.hidden;
+    if (!listEl.hidden) renderBlockedAppsList(listEl);
+    if (viewBtn) {
+      viewBtn.textContent = listEl.hidden ? t('viewBlockedApps') : t('hideBlockedApps');
+    }
+  }
+
+  function renderBlockedAppsList(listEl) {
+    const entries = listBlockedAppsEntries();
+    if (!entries.length) {
+      listEl.innerHTML = `<div class="srbb-blocked-list__empty">${escapeHtml(t('blockedAppsEmpty'))}</div>`;
+      return;
+    }
+    listEl.innerHTML = entries
+      .map((entry) => {
+        const label = entry.name || t('blockedAppUntitled', { id: entry.id });
+        const href = buildAppHref(entry.id, entry.name);
+        return `
+          <a class="srbb-blocked-list__item" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+            <span class="srbb-blocked-list__name">${escapeHtml(label)}</span>
+            <span class="srbb-blocked-list__id">${escapeHtml(entry.id)}</span>
+          </a>
+        `;
+      })
+      .join('');
   }
 
   function persistPanelForm() {
@@ -4405,6 +4615,7 @@
       proxyUser: panel.querySelector('#srbb-proxy-user').value.trim(),
       proxyPass: panel.querySelector('#srbb-proxy-pass').value,
       searchUnblocked: !!panel.querySelector('#srbb-search-unblocked')?.checked,
+      searchPageUnblocked: !!panel.querySelector('#srbb-search-page-unblocked')?.checked,
       rememberBlockedApps: !!panel.querySelector('#srbb-remember-blocked')?.checked,
       markBlockedInSearch: !!panel.querySelector('#srbb-mark-blocked-search')?.checked,
       probeBlockedInSearch: !!panel.querySelector('#srbb-probe-blocked')?.checked,
@@ -5423,6 +5634,52 @@
         font-size: 11px;
         flex: 1 1 auto;
       }
+      .srbb-blocked-list {
+        margin: 0 0 12px;
+        max-height: 180px;
+        overflow: auto;
+        border: 1px solid #000;
+        border-radius: 2px;
+        background: rgba(0,0,0,.25);
+      }
+      .srbb-blocked-list[hidden] {
+        display: none !important;
+      }
+      .srbb-blocked-list__empty {
+        padding: 10px 12px;
+        color: #8f98a0;
+        font-size: 11px;
+      }
+      .srbb-blocked-list__item {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 10px;
+        color: #c7d5e0;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0,0,0,.35);
+      }
+      .srbb-blocked-list__item:last-child {
+        border-bottom: 0;
+      }
+      .srbb-blocked-list__item:hover {
+        background: rgba(102,192,244,.1);
+        color: #fff;
+      }
+      .srbb-blocked-list__name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .srbb-blocked-list__id {
+        flex: 0 0 auto;
+        color: #66c0f4;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+      }
 
       .srbb-blocked-mark {
         display: inline-block;
@@ -5433,10 +5690,23 @@
         color: #ffc9c9;
         font-size: 10px;
         font-weight: 700;
+        letter-spacing: .03em;
         vertical-align: middle;
+        border: 1px solid #000;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
       }
-      .srbb-search-row--blocked {
+      .srbb-search-row--blocked,
+      a.srbb-search-row--blocked.search_result_row {
+        background: linear-gradient(90deg, rgba(107,42,42,.28), rgba(102,192,244,.08)) !important;
         box-shadow: inset 3px 0 0 #a94847;
+      }
+      .srbb-search-row--blocked:hover,
+      a.srbb-search-row--blocked.search_result_row:hover {
+        background: linear-gradient(90deg, rgba(107,42,42,.4), rgba(102,192,244,.14)) !important;
+      }
+      .srbb-search-row--blocked .search_capsule img,
+      .srbb-search-row--blocked .col.search_capsule img {
+        box-shadow: 0 0 0 1px rgba(169,72,71,.75);
       }
 
       @media (max-width: 900px) {
