@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.16.8
+// @version           1.16.9
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -1389,6 +1389,8 @@
   const probeSessionCache = new Map();
   /** @type {Array<object>} */
   let lastSuggestItems = [];
+  /** @type {Map<string, object | null>} */
+  const suggestMetaCache = new Map();
 
   init();
 
@@ -3377,6 +3379,225 @@
     });
   }
 
+  function mergeSuggestItemMeta(item, extra) {
+    if (!extra) return item;
+    return {
+      ...item,
+      name: item.name || extra.name || item.name,
+      type: item.type || extra.type,
+      img: item.img || extra.img,
+      priceLabel: item.priceLabel || extra.priceLabel,
+      priceOriginal: item.priceOriginal || extra.priceOriginal,
+      discountPct: item.discountPct || extra.discountPct,
+      isFree: item.isFree || extra.isFree,
+      platforms: item.platforms || extra.platforms,
+      metascore: item.metascore || extra.metascore,
+      controllerSupport: item.controllerSupport || extra.controllerSupport,
+      releaseDate: item.releaseDate || extra.releaseDate || '',
+      reviewSummary: item.reviewSummary || extra.reviewSummary || '',
+      reviewPercent: item.reviewPercent || extra.reviewPercent || '',
+      reviewTone: item.reviewTone || extra.reviewTone || '',
+      reviewDetail: item.reviewDetail || extra.reviewDetail || '',
+    };
+  }
+
+  function isSuggestItemSparse(item) {
+    if (!item?.id) return false;
+    if (String(item.type || '').toLowerCase() === 'bundle') return false;
+    return (
+      (!item.priceLabel && !item.isFree) ||
+      !item.releaseDate ||
+      !item.reviewSummary ||
+      !item.platforms
+    );
+  }
+
+  function buildAppDetailsUrl(appId) {
+    const url = new URL('https://store.steampowered.com/api/appdetails');
+    url.searchParams.set('appids', String(appId));
+    url.searchParams.set('l', getSteamStoreLanguage());
+    url.searchParams.set('cc', getStoreCountryCode().toLowerCase());
+    return url.toString();
+  }
+
+  function buildAppReviewsUrl(appId) {
+    const url = new URL(`https://store.steampowered.com/appreviews/${appId}`);
+    url.searchParams.set('json', '1');
+    url.searchParams.set('language', getSteamStoreLanguage());
+    url.searchParams.set('purchase_type', 'all');
+    url.searchParams.set('filter_offtopic_activity', '0');
+    url.searchParams.set('num_per_page', '0');
+    return url.toString();
+  }
+
+  function suggestMetaCacheKey(appId) {
+    return `${appId}:${getStoreCountryCode()}:${getSteamStoreLanguage()}`;
+  }
+
+  function mapAppDetailsToSuggestFields(appId, data) {
+    if (!data || typeof data !== 'object') return null;
+
+    const platforms =
+      data.platforms && typeof data.platforms === 'object'
+        ? {
+            windows: !!data.platforms.windows,
+            mac: !!data.platforms.mac,
+            linux: !!data.platforms.linux,
+          }
+        : null;
+
+    let priceLabel = '';
+    let priceOriginal = '';
+    let discountPct = 0;
+    let isFree = !!data.is_free;
+    const price = data.price_overview;
+    if (price && typeof price === 'object') {
+      if (typeof price.final_formatted === 'string' && price.final_formatted.trim()) {
+        priceLabel = price.final_formatted.trim();
+      } else if (typeof price.final === 'number') {
+        priceLabel = formatMoneyAmount(price.final, price.currency || '');
+      }
+      if (typeof price.initial_formatted === 'string' && price.initial_formatted.trim()) {
+        priceOriginal = price.initial_formatted.trim();
+      } else if (typeof price.initial === 'number' && price.initial > (price.final || 0)) {
+        priceOriginal = formatMoneyAmount(price.initial, price.currency || '');
+      }
+      if (typeof price.discount_percent === 'number' && price.discount_percent > 0) {
+        discountPct = price.discount_percent;
+      }
+      if (typeof price.final === 'number' && price.final === 0) {
+        isFree = true;
+        priceLabel = priceLabel || t('suggestFree');
+      }
+    } else if (isFree) {
+      priceLabel = t('suggestFree');
+    }
+
+    const img =
+      data.capsule_image ||
+      data.capsule_imagev5 ||
+      data.header_image ||
+      buildBlockedAppCapsule(appId);
+
+    const metascore =
+      data.metacritic && data.metacritic.score != null ? String(data.metacritic.score) : '';
+
+    return {
+      id: String(appId),
+      name: String(data.name || '').trim(),
+      type: String(data.type || 'game').toLowerCase(),
+      img,
+      priceLabel,
+      priceOriginal,
+      discountPct,
+      isFree,
+      platforms,
+      metascore,
+      controllerSupport: String(data.controller_support || '').toLowerCase(),
+      releaseDate: String(data.release_date?.date || '').trim(),
+      reviewSummary: '',
+      reviewPercent: '',
+      reviewTone: '',
+      reviewDetail: '',
+    };
+  }
+
+  function mapAppReviewsToSuggestFields(parsed) {
+    const summary = parsed && parsed.query_summary;
+    if (!summary || !summary.total_reviews) {
+      return {
+        reviewSummary: '',
+        reviewPercent: '',
+        reviewTone: '',
+        reviewDetail: '',
+      };
+    }
+
+    const total = Number(summary.total_reviews) || 0;
+    const positive = Number(summary.total_positive) || 0;
+    const percent = total > 0 ? String(Math.round((positive / total) * 100)) : '';
+    const reviewSummary = String(summary.review_score_desc || '').trim();
+    const score = Number(summary.review_score);
+    let reviewTone = '';
+    if (Number.isFinite(score) && score > 0) {
+      if (score >= 6) reviewTone = 'positive';
+      else if (score === 5) reviewTone = 'mixed';
+      else reviewTone = 'negative';
+    }
+
+    const reviewDetail = percent
+      ? `${percent}% of the ${total.toLocaleString()} user reviews for this game are positive.`
+      : reviewSummary;
+
+    return {
+      reviewSummary,
+      reviewPercent: percent,
+      reviewTone,
+      reviewDetail,
+    };
+  }
+
+  async function fetchSuggestItemMeta(appId) {
+    const id = String(appId);
+    if (!/^\d+$/.test(id)) return null;
+
+    const cacheKey = suggestMetaCacheKey(id);
+    if (suggestMetaCache.has(cacheKey)) {
+      return suggestMetaCache.get(cacheKey);
+    }
+
+    try {
+      const [detailsParsed, reviewsParsed] = await Promise.all([
+        requestGuestJson(buildAppDetailsUrl(id)).catch(() => null),
+        requestGuestJson(buildAppReviewsUrl(id)).catch(() => null),
+      ]);
+
+      const entry = detailsParsed && detailsParsed[id];
+      const fromDetails =
+        entry && entry.success && entry.data ? mapAppDetailsToSuggestFields(id, entry.data) : null;
+      const fromReviews = mapAppReviewsToSuggestFields(reviewsParsed);
+
+      if (!fromDetails && !fromReviews.reviewSummary) {
+        suggestMetaCache.set(cacheKey, null);
+        return null;
+      }
+
+      const merged = {
+        ...(fromDetails || {
+          id,
+          name: '',
+          type: 'game',
+          img: buildBlockedAppCapsule(id),
+          ...emptySuggestItemFields(),
+        }),
+        ...fromReviews,
+      };
+      suggestMetaCache.set(cacheKey, merged);
+      return merged;
+    } catch {
+      suggestMetaCache.set(cacheKey, null);
+      return null;
+    }
+  }
+
+  async function enrichSparseSuggestItems(items, { isCancelled } = {}) {
+    if (!items?.length) return items || [];
+
+    const targets = items.filter(isSuggestItemSparse).slice(0, 12);
+    if (!targets.length) return items;
+
+    const byId = Object.create(null);
+    await mapPool(targets, 3, async (item) => {
+      if (isCancelled?.()) return;
+      const meta = await fetchSuggestItemMeta(item.id);
+      if (meta) byId[item.id] = meta;
+    });
+
+    if (isCancelled?.()) return items;
+
+    return items.map((item) => mergeSuggestItemMeta(item, byId[item.id]));
+  }
+
   function unionSuggestItems(...lists) {
     const seen = Object.create(null);
     const out = [];
@@ -3634,6 +3855,10 @@
 
       items = mergeSuggestSearchFields(items, searchItems);
       items = mergeSuggestStoreExtras(items, storeItems);
+      items = await enrichSparseSuggestItems(items, {
+        isCancelled: () => token !== suggestToken,
+      });
+      if (token !== suggestToken) return;
       items = trimSuggestItems(
         items,
         blockedMatches.map((item) => item.id).concat(storeItems.map((item) => item.id))
@@ -4135,8 +4360,13 @@
     const blockedMatches = collectBlockedSuggestMatches(term);
     // storesearch first so hidden titles keep Steam's relevance ranking
     const ranked = unionSuggestItems(storeItems, blockedMatches);
-    const missing = ranked.filter((item) => item?.id && !rowById.has(String(item.id)));
+    let missing = ranked.filter((item) => item?.id && !rowById.has(String(item.id)));
     if (!missing.length) return;
+
+    missing = await enrichSparseSuggestItems(missing, {
+      isCancelled: () => token !== searchPageToken,
+    });
+    if (token !== searchPageToken) return;
 
     for (const item of missing) {
       if (token !== searchPageToken) return;
