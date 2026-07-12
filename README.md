@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.9.0-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.10.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header and `/search` results without account cookies.
 
@@ -114,6 +114,7 @@ When **Guest search** is enabled in the Region Bypass panel:
 1. Typing in the store header search fetches anonymous suggestions (`/search/suggest`, fallback `/api/storesearch/`).
 2. Submitting search or opening `/search/?term=…` refetches results as a guest and injects them into the page.
 3. Optional **blocked games registry** highlights apps you previously opened on a region-error page.
+4. **Remember search text** (on by default) keeps the last query in the header search box across page navigations.
 
 Uses the same proxy, `cc`, language, and cache settings as app-page bypass.
 

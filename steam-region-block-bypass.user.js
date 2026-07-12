@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.9.0
+// @version           1.10.0
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -48,6 +48,7 @@
   const STORAGE_KEY = 'srbb_settings';
   const CACHE_STORAGE_KEY = 'srbb_page_cache';
   const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';
+  const SEARCH_TERM_STORAGE_KEY = 'srbb_search_term';
   /** Soft cap so GM storage does not grow without bound */
   const CACHE_MAX_ENTRIES = 30;
   const BLOCKED_APPS_MAX_ENTRIES = 500;
@@ -67,6 +68,8 @@
     cacheMinutes: 60,
     /** Guest search: anonymous suggest dropdown + /search results */
     searchUnblocked: false,
+    /** Keep the store header search term across page navigations */
+    rememberSearchTerm: true,
     /** Remember app IDs when Steam shows a region block */
     rememberBlockedApps: true,
     /** Highlight remembered blocked apps in guest search */
@@ -161,6 +164,9 @@
       searchUnblocked: 'Guest search',
       searchUnblockedHint:
         'Search suggestions and /search results are fetched without account cookies (same guest stack as app bypass).',
+      rememberSearchTerm: 'Remember search text',
+      rememberSearchTermHint:
+        'Keep the last query in the store search box when you navigate between pages.',
       suggestEmpty: 'Type to search the store as a guest (no account cookies)',
       suggestLoading: 'Searching…',
       suggestFailed: 'Search suggestions failed: {error}',
@@ -249,6 +255,9 @@
       searchUnblocked: 'Гостевой поиск',
       searchUnblockedHint:
         'Подсказки и результаты /search запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений).',
+      rememberSearchTerm: 'Запоминать текст поиска',
+      rememberSearchTermHint:
+        'Сохранять последний запрос в поле поиска магазина при переходах между страницами.',
       suggestEmpty: 'Введите запрос для гостевого поиска (без cookies аккаунта)',
       suggestLoading: 'Поиск…',
       suggestFailed: 'Не удалось загрузить подсказки: {error}',
@@ -331,6 +340,8 @@
       cacheMinutesHint: '成功的访客页面在重新请求前可复用多久。0 禁用缓存。「重新加载」始终获取最新内容。',
       searchUnblocked: '访客搜索',
       searchUnblockedHint: '搜索建议和 /search 结果以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。',
+      rememberSearchTerm: '记住搜索文本',
+      rememberSearchTermHint: '在页面之间导航时保留商店搜索框中的上次查询。',
       suggestEmpty: '输入关键词以访客身份搜索商店（无账号 Cookie）',
       suggestLoading: '搜索中…',
       suggestFailed: '搜索建议加载失败：{error}',
@@ -418,6 +429,9 @@
       searchUnblocked: 'Búsqueda invitado',
       searchUnblockedHint:
         'Las sugerencias y los resultados de /search se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps).',
+      rememberSearchTerm: 'Recordar texto de búsqueda',
+      rememberSearchTermHint:
+        'Conserva la última consulta en el cuadro de búsqueda de la tienda al navegar entre páginas.',
       suggestEmpty: 'Escribe para buscar en la tienda como invitado (sin cookies de cuenta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Error al cargar sugerencias: {error}',
@@ -506,6 +520,9 @@
       searchUnblocked: 'Busca convidado',
       searchUnblockedHint:
         'Sugestões e resultados de /search são obtidos sem cookies da conta (mesmo stack convidado do bypass de apps).',
+      rememberSearchTerm: 'Lembrar texto da busca',
+      rememberSearchTermHint:
+        'Mantém a última consulta na caixa de busca da loja ao navegar entre páginas.',
       suggestEmpty: 'Digite para buscar na loja como convidado (sem cookies da conta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Falha ao carregar sugestões: {error}',
@@ -594,6 +611,9 @@
       searchUnblocked: 'Gast-Suche',
       searchUnblockedHint:
         'Suchvorschläge und /search-Ergebnisse werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass).',
+      rememberSearchTerm: 'Suchtext merken',
+      rememberSearchTermHint:
+        'Behält die letzte Abfrage im Store-Suchfeld beim Navigieren zwischen Seiten.',
       suggestEmpty: 'Tippen, um den Store als Gast zu durchsuchen (ohne Account-Cookies)',
       suggestLoading: 'Suche…',
       suggestFailed: 'Suchvorschläge fehlgeschlagen: {error}',
@@ -682,6 +702,9 @@
       searchUnblocked: 'Recherche invité',
       searchUnblockedHint:
         'Les suggestions et résultats /search sont récupérés sans cookies de compte (même pile invité que le bypass d’apps).',
+      rememberSearchTerm: 'Mémoriser le texte de recherche',
+      rememberSearchTermHint:
+        'Conserve la dernière requête dans le champ de recherche de la boutique lors de la navigation.',
       suggestEmpty: 'Tapez pour chercher dans la boutique en invité (sans cookies de compte)',
       suggestLoading: 'Recherche…',
       suggestFailed: 'Échec des suggestions : {error}',
@@ -769,6 +792,9 @@
       searchUnblocked: 'ゲスト検索',
       searchUnblockedHint:
         '検索候補と /search 結果をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。',
+      rememberSearchTerm: '検索テキストを記憶',
+      rememberSearchTermHint:
+        'ページ間を移動してもストア検索欄の最後のクエリを保持します。',
       suggestEmpty: 'ゲストとしてストアを検索するには入力してください（アカウントCookieなし）',
       suggestLoading: '検索中…',
       suggestFailed: '検索候補の取得に失敗: {error}',
@@ -855,6 +881,9 @@
       searchUnblocked: '게스트 검색',
       searchUnblockedHint:
         '검색 제안과 /search 결과를 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택).',
+      rememberSearchTerm: '검색어 기억',
+      rememberSearchTermHint:
+        '페이지를 이동해도 스토어 검색창의 마지막 검색어를 유지합니다.',
       suggestEmpty: '게스트로 스토어를 검색하려면 입력하세요(계정 쿠키 없음)',
       suggestLoading: '검색 중…',
       suggestFailed: '검색 제안을 불러오지 못했습니다: {error}',
@@ -942,6 +971,9 @@
       searchUnblocked: 'Wyszukiwanie gościa',
       searchUnblockedHint:
         'Podpowiedzi i wyniki /search są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji).',
+      rememberSearchTerm: 'Zapamiętuj tekst wyszukiwania',
+      rememberSearchTermHint:
+        'Zachowuje ostatnie zapytanie w polu wyszukiwania sklepu podczas przechodzenia między stronami.',
       suggestEmpty: 'Wpisz, aby przeszukać sklep jako gość (bez cookies konta)',
       suggestLoading: 'Wyszukiwanie…',
       suggestFailed: 'Nie udało się załadować podpowiedzi: {error}',
@@ -1067,6 +1099,7 @@
   /** Guest search state */
   let suggestToken = 0;
   let suggestDebounceTimer = null;
+  let searchTermSaveTimer = null;
   let activeSuggestIndex = -1;
   let searchPageToken = 0;
   let searchPageDebounceTimer = null;
@@ -2240,7 +2273,51 @@
 
     ensureSuggestDropdown(mount);
     bindSearchInput(form);
+    restoreSearchTerm(getSearchInput(form));
     syncSearchGuestMode();
+  }
+
+  function getSavedSearchTerm() {
+    const raw = GM_getValue(SEARCH_TERM_STORAGE_KEY, '');
+    return typeof raw === 'string' ? raw : '';
+  }
+
+  function saveSearchTerm(term) {
+    if (!settings.rememberSearchTerm) return;
+    GM_setValue(SEARCH_TERM_STORAGE_KEY, String(term ?? ''));
+  }
+
+  function scheduleSaveSearchTerm(term) {
+    if (!settings.rememberSearchTerm) return;
+    if (searchTermSaveTimer) window.clearTimeout(searchTermSaveTimer);
+    searchTermSaveTimer = window.setTimeout(() => {
+      saveSearchTerm(term);
+    }, 200);
+  }
+
+  function restoreSearchTerm(input) {
+    if (!input || !settings.rememberSearchTerm) return;
+
+    if (isSearchPage()) {
+      try {
+        const fromUrl = new URL(location.href).searchParams.get('term');
+        if (fromUrl != null && fromUrl !== '') {
+          if (!input.value) input.value = fromUrl;
+          saveSearchTerm(fromUrl);
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (input.value.trim()) {
+      scheduleSaveSearchTerm(input.value);
+      return;
+    }
+
+    const saved = getSavedSearchTerm();
+    if (saved) input.value = saved;
   }
 
   function ensureSuggestDropdown(mount) {
@@ -2265,7 +2342,10 @@
     if (!input) return;
     form.dataset.srbbBound = '1';
 
-    input.addEventListener('input', () => handleSuggestInput(input));
+    input.addEventListener('input', () => {
+      scheduleSaveSearchTerm(input.value);
+      handleSuggestInput(input);
+    });
     input.addEventListener('focus', () => {
       if (settings.searchUnblocked) handleSuggestInput(input);
     });
@@ -2275,6 +2355,7 @@
     input.addEventListener('keydown', (e) => handleSuggestKeydown(e, input));
 
     form.addEventListener('submit', (e) => {
+      if (settings.rememberSearchTerm) saveSearchTerm(input.value);
       if (!settings.searchUnblocked) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2309,11 +2390,13 @@
     if (!panel) return;
     const cb = panel.querySelector('#srbb-search-unblocked');
     const pill = panel.querySelector('#srbb-search-pill');
+    const rememberTerm = panel.querySelector('#srbb-remember-search-term');
     if (cb) cb.checked = !!settings.searchUnblocked;
     if (pill) {
       pill.textContent = settings.searchUnblocked ? t('on') : t('off');
       pill.classList.toggle('is-on', !!settings.searchUnblocked);
     }
+    if (rememberTerm) rememberTerm.checked = !!settings.rememberSearchTerm;
   }
 
   function buildSuggestUrl(term) {
@@ -2987,6 +3070,15 @@
 
           <div class="srbb-panel__section srbb-panel__section--row">
             <label class="srbb-switch">
+              <input type="checkbox" id="srbb-remember-search-term" />
+              <span class="srbb-switch__track"></span>
+              <span class="srbb-switch__label">${escapeHtml(t('rememberSearchTerm'))}</span>
+            </label>
+          </div>
+          <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('rememberSearchTermHint'))}</p>
+
+          <div class="srbb-panel__section srbb-panel__section--row">
+            <label class="srbb-switch">
               <input type="checkbox" id="srbb-remember-blocked" />
               <span class="srbb-switch__track"></span>
               <span class="srbb-switch__label">${escapeHtml(t('rememberBlockedApps'))}</span>
@@ -3089,6 +3181,14 @@
     panel.querySelector('#srbb-search-unblocked')?.addEventListener('change', () => {
       saveSettings({ searchUnblocked: panel.querySelector('#srbb-search-unblocked').checked });
     });
+    panel.querySelector('#srbb-remember-search-term')?.addEventListener('change', () => {
+      const on = !!panel.querySelector('#srbb-remember-search-term').checked;
+      saveSettings({ rememberSearchTerm: on });
+      if (on) {
+        const input = getSearchInput();
+        if (input) saveSearchTerm(input.value);
+      }
+    });
     panel.querySelector('#srbb-remember-blocked')?.addEventListener('change', () => {
       saveSettings({ rememberBlockedApps: panel.querySelector('#srbb-remember-blocked').checked });
       syncBlockedAppsPanel();
@@ -3171,6 +3271,7 @@
       proxyUser: panel.querySelector('#srbb-proxy-user').value.trim(),
       proxyPass: panel.querySelector('#srbb-proxy-pass').value,
       searchUnblocked: !!panel.querySelector('#srbb-search-unblocked')?.checked,
+      rememberSearchTerm: !!panel.querySelector('#srbb-remember-search-term')?.checked,
       rememberBlockedApps: !!panel.querySelector('#srbb-remember-blocked')?.checked,
       markBlockedInSearch: !!panel.querySelector('#srbb-mark-blocked-search')?.checked,
     });
