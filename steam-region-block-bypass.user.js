@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.16.9
+// @version           1.16.10
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -197,6 +197,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region blocked',
+      suggestComingSoon: 'Coming soon',
       suggestStatAvailable: 'Available {count}',
       suggestStatBlocked: 'Blocked {count}',
       rememberBlockedApps: 'Remember blocked games',
@@ -314,6 +315,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Регион заблокирован',
+      suggestComingSoon: 'Скоро',
       suggestStatAvailable: 'Доступно {count}',
       suggestStatBlocked: 'Заблокировано {count}',
       rememberBlockedApps: 'Запоминать заблокированные игры',
@@ -423,6 +425,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地区限制',
+      suggestComingSoon: '即将推出',
       suggestStatAvailable: '可用 {count}',
       suggestStatBlocked: '受限 {count}',
       rememberBlockedApps: '记住被封锁的游戏',
@@ -539,6 +542,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Región bloqueada',
+      suggestComingSoon: 'Próximamente',
       suggestStatAvailable: 'Disponibles {count}',
       suggestStatBlocked: 'Bloqueados {count}',
       rememberBlockedApps: 'Recordar juegos bloqueados',
@@ -656,6 +660,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Região bloqueada',
+      suggestComingSoon: 'Em breve',
       suggestStatAvailable: 'Disponíveis {count}',
       suggestStatBlocked: 'Bloqueados {count}',
       rememberBlockedApps: 'Lembrar jogos bloqueados',
@@ -773,6 +778,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region gesperrt',
+      suggestComingSoon: 'Demnächst',
       suggestStatAvailable: 'Verfügbar {count}',
       suggestStatBlocked: 'Gesperrt {count}',
       rememberBlockedApps: 'Gesperrte Spiele merken',
@@ -890,6 +896,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Région bloquée',
+      suggestComingSoon: 'Bientôt disponible',
       suggestStatAvailable: 'Disponibles {count}',
       suggestStatBlocked: 'Bloqués {count}',
       rememberBlockedApps: 'Mémoriser les jeux bloqués',
@@ -1006,6 +1013,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '地域制限',
+      suggestComingSoon: '近日登場',
       suggestStatAvailable: '利用可 {count}',
       suggestStatBlocked: '制限 {count}',
       rememberBlockedApps: 'ブロックされたゲームを記憶',
@@ -1121,6 +1129,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: '지역 제한',
+      suggestComingSoon: '출시 예정',
       suggestStatAvailable: '이용 가능 {count}',
       suggestStatBlocked: '차단됨 {count}',
       rememberBlockedApps: '차단된 게임 기억',
@@ -1237,6 +1246,7 @@
       suggestMetascore: 'Metascore {score}',
       suggestReviews: '{summary} · {percent}%',
       suggestRegionBlocked: 'Region zablokowany',
+      suggestComingSoon: 'Wkrótce',
       suggestStatAvailable: 'Dostępne {count}',
       suggestStatBlocked: 'Zablokowane {count}',
       rememberBlockedApps: 'Zapamiętuj zablokowane gry',
@@ -3434,6 +3444,14 @@
     return `${appId}:${getStoreCountryCode()}:${getSteamStoreLanguage()}`;
   }
 
+  function formatReleaseDateFromAppDetails(release) {
+    if (!release || typeof release !== 'object') return '';
+    const date = String(release.date || '').trim();
+    if (date) return date;
+    if (release.coming_soon) return t('suggestComingSoon');
+    return '';
+  }
+
   function mapAppDetailsToSuggestFields(appId, data) {
     if (!data || typeof data !== 'object') return null;
 
@@ -3494,7 +3512,7 @@
       platforms,
       metascore,
       controllerSupport: String(data.controller_support || '').toLowerCase(),
-      releaseDate: String(data.release_date?.date || '').trim(),
+      releaseDate: formatReleaseDateFromAppDetails(data.release_date),
       reviewSummary: '',
       reviewPercent: '',
       reviewTone: '',
@@ -3543,7 +3561,10 @@
 
     const cacheKey = suggestMetaCacheKey(id);
     if (suggestMetaCache.has(cacheKey)) {
-      return suggestMetaCache.get(cacheKey);
+      const cached = suggestMetaCache.get(cacheKey);
+      // Incomplete reviews-only entries are not cached; null means hard miss.
+      if (cached === null || (cached && cached.releaseDate)) return cached;
+      if (cached && (cached.priceLabel || cached.isFree || cached.platforms)) return cached;
     }
 
     try {
@@ -3572,7 +3593,8 @@
         }),
         ...fromReviews,
       };
-      suggestMetaCache.set(cacheKey, merged);
+      // Only cache when appdetails succeeded — otherwise retry next time for release/price.
+      if (fromDetails) suggestMetaCache.set(cacheKey, merged);
       return merged;
     } catch {
       suggestMetaCache.set(cacheKey, null);
@@ -3583,7 +3605,16 @@
   async function enrichSparseSuggestItems(items, { isCancelled } = {}) {
     if (!items?.length) return items || [];
 
-    const targets = items.filter(isSuggestItemSparse).slice(0, 12);
+    const targets = items
+      .filter(isSuggestItemSparse)
+      .sort((a, b) => {
+        const rank = (item) =>
+          (!item.releaseDate ? 4 : 0) +
+          (isBlockedApp(item.id) ? 2 : 0) +
+          (!item.priceLabel && !item.isFree ? 1 : 0);
+        return rank(b) - rank(a);
+      })
+      .slice(0, 12);
     if (!targets.length) return items;
 
     const byId = Object.create(null);
@@ -3913,9 +3944,6 @@
 
   function buildSuggestFactsHtml(item) {
     const parts = [];
-    if (item.releaseDate) {
-      parts.push(`<span class="srbb-suggest__release">${escapeHtml(item.releaseDate)}</span>`);
-    }
     if (item.reviewSummary) {
       const toneClass = item.reviewTone ? ` srbb-suggest__review--${item.reviewTone}` : '';
       const label =
@@ -3928,7 +3956,21 @@
       );
     }
     if (!parts.length) return '';
-    return `<div class="srbb-suggest__facts">${parts.join('<span class="srbb-suggest__facts-sep" aria-hidden="true">·</span>')}</div>`;
+    return `<div class="srbb-suggest__facts">${parts.join('')}</div>`;
+  }
+
+  function buildSuggestDetailsHtml(item) {
+    return `
+      <div class="srbb-suggest__details">
+        ${buildSuggestPriceHtml(item)}
+        ${
+          item.releaseDate
+            ? `<span class="srbb-suggest__release">${escapeHtml(item.releaseDate)}</span>`
+            : ''
+        }
+        ${buildSuggestPlatformsHtml(item)}
+      </div>
+    `;
   }
 
   function buildSuggestExtrasHtml(item) {
@@ -3968,10 +4010,7 @@
             <span class="srbb-suggest__probe-spin" hidden aria-hidden="true"></span>
             ${buildSuggestBlockedBadgeHtml(item)}
           </div>
-          <div class="srbb-suggest__details">
-            ${buildSuggestPriceHtml(item)}
-            ${buildSuggestPlatformsHtml(item)}
-          </div>
+          ${buildSuggestDetailsHtml(item)}
           ${buildSuggestFactsHtml(item)}
           <div class="srbb-suggest__footer">
             ${buildSuggestExtrasHtml(item)}
@@ -5996,6 +6035,9 @@
         gap: 10px;
         flex-wrap: wrap;
       }
+      .srbb-suggest__details .srbb-suggest__release {
+        margin-right: auto;
+      }
       .srbb-suggest__facts {
         display: flex;
         align-items: center;
@@ -6010,6 +6052,8 @@
       }
       .srbb-suggest__release {
         color: #8f98a0;
+        font-size: 11px;
+        line-height: 1.3;
       }
       .srbb-suggest__review {
         font-weight: 600;
