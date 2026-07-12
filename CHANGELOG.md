@@ -5,6 +5,54 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-07-12
+
+### Changed
+
+- Release docs and userscript `@description` now advertise **guest search** (header suggestions + `/search` results) alongside app-page region bypass
+
+## [1.8.2] - 2026-07-12
+
+### Fixed
+
+- Settings panel would not hide after close: `display: flex` overrode the `hidden` attribute
+
+## [1.8.1] - 2026-07-12
+
+### Changed
+
+- Settings panel uses tabs (General / Search / Proxy) with a viewport-clamped scrollable body so options no longer overflow the screen
+
+## [1.8.0] - 2026-07-12
+
+### Added
+
+- **Blocked games registry** (`srbb_blocked_apps`) — auto-saves app IDs when Steam shows a region error; guest search highlights saved games with a region-blocked badge (settings: remember / highlight / clear list)
+
+## [1.7.3] - 2026-07-12
+
+### Changed
+
+- Guest search dropdown shows richer item cards: discount badge, original/final price, platforms (Win/Mac/Linux), type, Metascore, controller support, and app ID (via `/api/storesearch/` metadata)
+
+## [1.7.2] - 2026-07-12
+
+### Fixed
+
+- Guest search suggestions always empty: Steam `/search/suggest` and `/api/storesearch/` require `cc`; the script now infers store country from settings, `steamCountry` cookie, or page hints, and falls back to `storesearch` when suggest returns no hits
+
+## [1.7.1] - 2026-07-12
+
+### Changed
+
+- Guest search mode toggle moved from the store search bar into the Region Bypass settings panel only
+
+## [1.7.0] - 2026-07-12
+
+### Added
+
+- **Guest search** — setting in the Region Bypass panel: anonymous suggest dropdown (`/search/suggest`) and guest refetch/inject for `/search` results (same proxy, `cc`, language, and cache stack as app bypass)
+
 ## [1.6.4] - 2026-07-12
 
 ### Changed

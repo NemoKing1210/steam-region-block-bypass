@@ -2,11 +2,11 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.6.4-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.9.0-green?style=for-the-badge)](CHANGELOG.md)
 
-A userscript for the Steam store that restores the product page when Steam shows **“This item is currently unavailable in your region”**.
+A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header and `/search` results without account cookies.
 
-It refetches the same app URL **without account cookies** (guest view) and injects the store content into the page. For IP-based locks, an optional **proxy gateway** can be configured from a Steam-styled settings panel in the header.
+It refetches app URLs **without account cookies** (guest view) and injects the real store layout. Enable **Guest search** in the Region Bypass settings panel for store-wide search. For IP-based locks, an optional **proxy gateway** can be configured from a Steam-styled settings panel in the header.
 
 Compatible with [Tampermonkey](https://www.tampermonkey.net/), [Violentmonkey](https://violentmonkey.github.io/), [Greasemonkey](https://www.greasespot.net/), ScriptCat, and other managers that support the `// ==UserScript==` metadata block.
 
@@ -64,14 +64,17 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 - **Steam-like UI** — **Region Bypass** button in `#global_actions`, dark Steam-styled settings popup
 - **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl
 - **Manual controls** — reload injected content, open settings from the banner or userscript manager menu
+- **Guest search** — optional setting in the Region Bypass panel: anonymous suggest dropdown and `/search` results via the same guest fetch stack (proxy / `cc` / cache)
+- **Blocked games registry** — remembers region-blocked app IDs and highlights them in guest search (dropdown and `/search` results)
 
 ## Supported pages
 
-| Site | URL pattern |
-|------|-------------|
-| Steam Store | `https://store.steampowered.com/*` |
+| Site | URL pattern | Notes |
+|------|-------------|-------|
+| Steam Store (apps) | `https://store.steampowered.com/app/{id}/…` | Region-error bypass (main use case) |
+| Steam Store (search) | Header search + `https://store.steampowered.com/search/?term=…` | **Guest search** setting in Region Bypass panel |
 
-Works best on app pages such as `https://store.steampowered.com/app/{id}/…` when the region error is shown.
+App pages work when Steam shows **“This item is currently unavailable in your region”**. With **Guest search** enabled, the header search bar and `/search` use the same anonymous guest fetch stack (proxy / `cc` / cache). Saved region-blocked app IDs can be highlighted in search results.
 
 ## How it works
 
@@ -103,6 +106,16 @@ Steam app page loads
                 └── clear Oops shell → inject layout + CSS + Steam JS + banner
                     (successful HTML saved to cache)
 ```
+
+### Guest search
+
+When **Guest search** is enabled in the Region Bypass panel:
+
+1. Typing in the store header search fetches anonymous suggestions (`/search/suggest`, fallback `/api/storesearch/`).
+2. Submitting search or opening `/search/?term=…` refetches results as a guest and injects them into the page.
+3. Optional **blocked games registry** highlights apps you previously opened on a region-error page.
+
+Uses the same proxy, `cc`, language, and cache settings as app-page bypass.
 
 ### Anonymous fetch
 
