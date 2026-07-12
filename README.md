@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.1.1-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores the product page when Steam shows **“This item is currently unavailable in your region”**.
 
@@ -46,7 +46,7 @@ The script includes `@updateURL` and `@downloadURL` metadata pointing to the raw
 
 **To release a new version:**
 
-1. Bump `@version` in `steam-region-block-bypass.user.js` and `steam-region-block-bypass.meta.js`.
+1. Bump `@version` in `steam-region-block-bypass.user.js` and `steam-region-block-bypass.meta.js` (and `package.json`).
 2. Add an entry to [`CHANGELOG.md`](CHANGELOG.md).
 3. Push to `main` (or create a GitHub Release).
 
@@ -54,14 +54,16 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 
 ## Features
 
-- **Insert mode** — Direct DOM inject (Steam game layout) or iframe with the full guest HTML
-- **Auto-bypass on blocked pages** — detects the Steam region error box and refetches the page as a guest
+- **Direct DOM inject** — clears the Oops / region-error shell and inserts the real Steam game layout (`.game_page_background` / `#tabletGrid`)
+- **Auto-bypass or button** — run immediately on blocked pages, or show a manual offer first
 - **Anonymous request** — uses `GM_xmlhttpRequest` with `anonymous: true` (no login cookies)
+- **Store language** — guest fetch uses `Steam_Language`, `?l=`, and `Accept-Language` so the page matches your Steam UI language
 - **Age-gate cookies** — sends `birthtime` / mature-content cookies so guest pages are less likely to stop at the age check
 - **Optional store country (`cc`)** — override Steam store country for the guest request
 - **Proxy gateway panel** — enable/disable, host, port, username, password, URL mode
 - **Steam-like UI** — **Region Bypass** button in `#global_actions`, dark Steam-styled settings popup
-- **Manual controls** — reload injected content, open settings from the banner or Violentmonkey menu
+- **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl
+- **Manual controls** — reload injected content, open settings from the banner or userscript manager menu
 
 ## Supported pages
 
@@ -77,31 +79,38 @@ Works best on app pages such as `https://store.steampowered.com/app/{id}/…` wh
 Steam app page loads
        │
        ▼
-#error_box matches “unavailable in your region”?
+#error_box / Oops matches “unavailable in your region”?
        │
        ├── no ──► idle (settings button still available)
        │
-       └── yes ──► Build target URL (optional ?cc=)
+       └── yes ──► Build target URL (?l= language, optional ?cc=)
                 │
                 ▼
        Optional: rewrite URL through proxy gateway
                 │
                 ▼
-       GM_xmlhttpRequest(anonymous: true, Cookie: birthtime…)
+       GM_xmlhttpRequest(anonymous: true,
+         Cookie: birthtime…; Steam_Language=…)
                 │
                 ▼
        Parse HTML → extract .game_page_background / #tabletGrid
                 │
                 ├── still blocked? ──► show error + suggest proxy
                 │
-                ├── injectMode=iframe ──► blob URL iframe (full guest HTML)
-                │
-                └── injectMode=direct ──► clear Oops shell, insert game layout + banner
+                └── clear Oops shell → inject game layout + stylesheets + banner
 ```
 
 ### Anonymous fetch
 
 Steam often gates the store page by **account country**. A privileged request without session cookies can return the public store layout for that IP. The script never uses your logged-in session for the bypass request.
+
+### Store language
+
+The guest request mirrors your Steam store language when possible:
+
+1. `Steam_Language` cookie from the current page
+2. Otherwise a language derived from the UI/browser locale
+3. Applied as `?l=…`, `Cookie: Steam_Language=…`, and `Accept-Language`
 
 ### Proxy gateway
 
@@ -196,8 +205,7 @@ Settings are stored in userscript storage (`srbb_settings`) via the header panel
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Auto-bypass | on | Run bypass automatically on region-error pages |
-| Insert mode | `direct` | `direct` injects `.game_page_background`; `iframe` loads full guest HTML |
+| Bypass trigger | Auto | **Auto** runs on region-error pages; **Show button** waits for a manual offer |
 | Store country (`cc`) | empty | Optional Steam country code for guest requests |
 | Use proxy gateway | off | Route the anonymous fetch through a gateway |
 | Gateway mode | `gateway` | How the target URL is appended to `host:port` |

@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-12
+
+### Added
+
+- Guest fetch follows Steam store language: `Steam_Language` cookie, `?l=` on the request URL, and matching `Accept-Language`
+- UI strings localized for en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, and pl (browser locale detection)
+- Broader region-error detection: Oops landing without `#error_box`, plus localized “unavailable in your region” patterns
+
+### Changed
+
+- Insert mode removed — always uses direct DOM inject of the Steam game layout (iframe / blob path dropped)
+- Settings panel: bypass trigger is **Auto** vs **Show button** (no insert-mode control)
+
+### Fixed
+
+- Injected pages strip extension junk (`script`, AlikeGuradian / AG markers) that break outside a full store boot
+
 ## [1.1.1] - 2026-07-12
 
 ### Fixed
@@ -35,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-bypass on blocked pages and Violentmonkey menu command for settings
 - Optional local HTTP gateway (`proxy-gateway.mjs`) for upstream HTTP/SOCKS proxies
 
+[1.4.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.4.0
 [1.1.1]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.1.1
 [1.1.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.1.0
 [1.0.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.0.0
