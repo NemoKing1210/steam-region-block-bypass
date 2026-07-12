@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-07-12
+
+### Removed
+
+- **Remember search text** setting and `srbb_search_term` persistence (header search no longer restores the last query)
+
+### Added
+
+- Loading skeletons for guest search suggestions and `/search` results (Steam-styled shimmer placeholders)
+
+## [1.11.2] - 2026-07-12
+
+### Changed
+
+- Guest search suggestions debounce increased from 250 ms to 550 ms while typing
+
+## [1.11.1] - 2026-07-12
+
+### Fixed
+
+- **Remember search text** no longer restores the previous query while you clear the header search box (MutationObserver remount race + deferred empty save)
+
+### Changed
+
+- Clearing the search field (or Escape: close suggest → clear → blur) forgets the saved term immediately; emptying the box hides suggestions instead of showing the empty hint
+- Turning off **Remember search text** clears the stored query
+
 ## [1.11.0] - 2026-07-12
 
 ### Added

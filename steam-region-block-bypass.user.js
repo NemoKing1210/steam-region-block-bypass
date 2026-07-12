@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.11.0
+// @version           1.12.0
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -48,7 +48,6 @@
   const STORAGE_KEY = 'srbb_settings';
   const CACHE_STORAGE_KEY = 'srbb_page_cache';
   const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';
-  const SEARCH_TERM_STORAGE_KEY = 'srbb_search_term';
   /** Soft cap so GM storage does not grow without bound */
   const CACHE_MAX_ENTRIES = 30;
   const BLOCKED_APPS_MAX_ENTRIES = 500;
@@ -69,8 +68,6 @@
     cacheMinutes: 60,
     /** Guest search: anonymous suggest dropdown + /search results */
     searchUnblocked: false,
-    /** Keep the store header search term across page navigations */
-    rememberSearchTerm: true,
     /** Remember app IDs when Steam shows a region block */
     rememberBlockedApps: true,
     /** Highlight remembered blocked apps in guest search */
@@ -171,9 +168,8 @@
       searchUnblocked: 'Guest search',
       searchUnblockedHint:
         'Search suggestions and /search results are fetched without account cookies (same guest stack as app bypass).',
-      rememberSearchTerm: 'Remember search text',
-      rememberSearchTermHint:
-        'Keep the last query in the store search box when you navigate between pages.',
+
+
       suggestEmpty: 'Type to search the store as a guest (no account cookies)',
       suggestLoading: 'Searching…',
       suggestFailed: 'Search suggestions failed: {error}',
@@ -275,9 +271,8 @@
       searchUnblocked: 'Гостевой поиск',
       searchUnblockedHint:
         'Подсказки и результаты /search запрашиваются без cookies аккаунта (тот же гостевой стек, что и для страниц приложений).',
-      rememberSearchTerm: 'Запоминать текст поиска',
-      rememberSearchTermHint:
-        'Сохранять последний запрос в поле поиска магазина при переходах между страницами.',
+
+
       suggestEmpty: 'Введите запрос для гостевого поиска (без cookies аккаунта)',
       suggestLoading: 'Поиск…',
       suggestFailed: 'Не удалось загрузить подсказки: {error}',
@@ -373,8 +368,8 @@
       cacheMinutesHint: '成功的访客页面在重新请求前可复用多久。0 禁用缓存。「重新加载」始终获取最新内容。',
       searchUnblocked: '访客搜索',
       searchUnblockedHint: '搜索建议和 /search 结果以无账号 Cookie 的方式获取（与应用绕过相同的访客栈）。',
-      rememberSearchTerm: '记住搜索文本',
-      rememberSearchTermHint: '在页面之间导航时保留商店搜索框中的上次查询。',
+
+
       suggestEmpty: '输入关键词以访客身份搜索商店（无账号 Cookie）',
       suggestLoading: '搜索中…',
       suggestFailed: '搜索建议加载失败：{error}',
@@ -475,9 +470,8 @@
       searchUnblocked: 'Búsqueda invitado',
       searchUnblockedHint:
         'Las sugerencias y los resultados de /search se obtienen sin cookies de cuenta (mismo stack invitado que el bypass de apps).',
-      rememberSearchTerm: 'Recordar texto de búsqueda',
-      rememberSearchTermHint:
-        'Conserva la última consulta en el cuadro de búsqueda de la tienda al navegar entre páginas.',
+
+
       suggestEmpty: 'Escribe para buscar en la tienda como invitado (sin cookies de cuenta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Error al cargar sugerencias: {error}',
@@ -579,9 +573,8 @@
       searchUnblocked: 'Busca convidado',
       searchUnblockedHint:
         'Sugestões e resultados de /search são obtidos sem cookies da conta (mesmo stack convidado do bypass de apps).',
-      rememberSearchTerm: 'Lembrar texto da busca',
-      rememberSearchTermHint:
-        'Mantém a última consulta na caixa de busca da loja ao navegar entre páginas.',
+
+
       suggestEmpty: 'Digite para buscar na loja como convidado (sem cookies da conta)',
       suggestLoading: 'Buscando…',
       suggestFailed: 'Falha ao carregar sugestões: {error}',
@@ -683,9 +676,8 @@
       searchUnblocked: 'Gast-Suche',
       searchUnblockedHint:
         'Suchvorschläge und /search-Ergebnisse werden ohne Account-Cookies abgerufen (gleicher Gast-Stack wie App-Bypass).',
-      rememberSearchTerm: 'Suchtext merken',
-      rememberSearchTermHint:
-        'Behält die letzte Abfrage im Store-Suchfeld beim Navigieren zwischen Seiten.',
+
+
       suggestEmpty: 'Tippen, um den Store als Gast zu durchsuchen (ohne Account-Cookies)',
       suggestLoading: 'Suche…',
       suggestFailed: 'Suchvorschläge fehlgeschlagen: {error}',
@@ -787,9 +779,8 @@
       searchUnblocked: 'Recherche invité',
       searchUnblockedHint:
         'Les suggestions et résultats /search sont récupérés sans cookies de compte (même pile invité que le bypass d’apps).',
-      rememberSearchTerm: 'Mémoriser le texte de recherche',
-      rememberSearchTermHint:
-        'Conserve la dernière requête dans le champ de recherche de la boutique lors de la navigation.',
+
+
       suggestEmpty: 'Tapez pour chercher dans la boutique en invité (sans cookies de compte)',
       suggestLoading: 'Recherche…',
       suggestFailed: 'Échec des suggestions : {error}',
@@ -890,9 +881,8 @@
       searchUnblocked: 'ゲスト検索',
       searchUnblockedHint:
         '検索候補と /search 結果をアカウントCookieなしで取得します（アプリバイパスと同じゲストスタック）。',
-      rememberSearchTerm: '検索テキストを記憶',
-      rememberSearchTermHint:
-        'ページ間を移動してもストア検索欄の最後のクエリを保持します。',
+
+
       suggestEmpty: 'ゲストとしてストアを検索するには入力してください（アカウントCookieなし）',
       suggestLoading: '検索中…',
       suggestFailed: '検索候補の取得に失敗: {error}',
@@ -992,9 +982,8 @@
       searchUnblocked: '게스트 검색',
       searchUnblockedHint:
         '검색 제안과 /search 결과를 계정 쿠키 없이 가져옵니다(앱 우회와 동일한 게스트 스택).',
-      rememberSearchTerm: '검색어 기억',
-      rememberSearchTermHint:
-        '페이지를 이동해도 스토어 검색창의 마지막 검색어를 유지합니다.',
+
+
       suggestEmpty: '게스트로 스토어를 검색하려면 입력하세요(계정 쿠키 없음)',
       suggestLoading: '검색 중…',
       suggestFailed: '검색 제안을 불러오지 못했습니다: {error}',
@@ -1095,9 +1084,8 @@
       searchUnblocked: 'Wyszukiwanie gościa',
       searchUnblockedHint:
         'Podpowiedzi i wyniki /search są pobierane bez cookies konta (ten sam stos gościa co przy omijaniu stron aplikacji).',
-      rememberSearchTerm: 'Zapamiętuj tekst wyszukiwania',
-      rememberSearchTermHint:
-        'Zachowuje ostatnie zapytanie w polu wyszukiwania sklepu podczas przechodzenia między stronami.',
+
+
       suggestEmpty: 'Wpisz, aby przeszukać sklep jako gość (bez cookies konta)',
       suggestLoading: 'Wyszukiwanie…',
       suggestFailed: 'Nie udało się załadować podpowiedzi: {error}',
@@ -1236,7 +1224,6 @@
   /** Guest search state */
   let suggestToken = 0;
   let suggestDebounceTimer = null;
-  let searchTermSaveTimer = null;
   let activeSuggestIndex = -1;
   let searchPageToken = 0;
   let searchPageDebounceTimer = null;
@@ -1252,6 +1239,11 @@
 
   function init() {
     GM_addStyle(getStyles());
+    try {
+      GM_setValue('srbb_search_term', '');
+    } catch {
+      /* ignore */
+    }
     GM_registerMenuCommand(t('menuSettings'), () => {
       ensureSettingsButton().then(() => togglePanel(true));
     });
@@ -1275,6 +1267,7 @@
     const raw = GM_getValue(STORAGE_KEY, null);
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETTINGS };
     const merged = { ...DEFAULT_SETTINGS, ...raw };
+    delete merged.rememberSearchTerm;
     merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
     merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
     merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
@@ -2548,51 +2541,7 @@
 
     ensureSuggestDropdown(mount);
     bindSearchInput(form);
-    restoreSearchTerm(getSearchInput(form));
     syncSearchGuestMode();
-  }
-
-  function getSavedSearchTerm() {
-    const raw = GM_getValue(SEARCH_TERM_STORAGE_KEY, '');
-    return typeof raw === 'string' ? raw : '';
-  }
-
-  function saveSearchTerm(term) {
-    if (!settings.rememberSearchTerm) return;
-    GM_setValue(SEARCH_TERM_STORAGE_KEY, String(term ?? ''));
-  }
-
-  function scheduleSaveSearchTerm(term) {
-    if (!settings.rememberSearchTerm) return;
-    if (searchTermSaveTimer) window.clearTimeout(searchTermSaveTimer);
-    searchTermSaveTimer = window.setTimeout(() => {
-      saveSearchTerm(term);
-    }, 200);
-  }
-
-  function restoreSearchTerm(input) {
-    if (!input || !settings.rememberSearchTerm) return;
-
-    if (isSearchPage()) {
-      try {
-        const fromUrl = new URL(location.href).searchParams.get('term');
-        if (fromUrl != null && fromUrl !== '') {
-          if (!input.value) input.value = fromUrl;
-          saveSearchTerm(fromUrl);
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    if (input.value.trim()) {
-      scheduleSaveSearchTerm(input.value);
-      return;
-    }
-
-    const saved = getSavedSearchTerm();
-    if (saved) input.value = saved;
   }
 
   function ensureSuggestDropdown(mount) {
@@ -2722,6 +2671,17 @@
     }
   }
 
+  function clearSearchInput(input) {
+    if (!input) return;
+    input.value = '';
+    if (suggestDebounceTimer) {
+      window.clearTimeout(suggestDebounceTimer);
+      suggestDebounceTimer = null;
+    }
+    suggestToken += 1;
+    hideSuggestDropdown();
+  }
+
   function bindSearchInput(form) {
     if (!form || form.dataset.srbbBound === '1') return;
     const input = getSearchInput(form);
@@ -2729,19 +2689,17 @@
     form.dataset.srbbBound = '1';
 
     input.addEventListener('input', () => {
-      scheduleSaveSearchTerm(input.value);
       handleSuggestInput(input);
     });
     input.addEventListener('focus', () => {
-      if (settings.searchUnblocked) handleSuggestInput(input);
+      if (settings.searchUnblocked) handleSuggestInput(input, { fromFocus: true });
     });
     input.addEventListener('blur', () => {
       window.setTimeout(() => hideSuggestDropdown(), 150);
     });
-    input.addEventListener('keydown', (e) => handleSuggestKeydown(e, input));
+    input.addEventListener('keydown', (e) => handleSearchKeydown(e, input));
 
     form.addEventListener('submit', (e) => {
-      if (settings.rememberSearchTerm) saveSearchTerm(input.value);
       if (!settings.searchUnblocked) return;
       e.preventDefault();
       e.stopPropagation();
@@ -2763,6 +2721,7 @@
     if (!on) {
       hideSuggestDropdown();
       document.getElementById('srbb-search-banner')?.remove();
+      document.getElementById('srbb-search-skel')?.remove();
       return;
     }
 
@@ -2776,13 +2735,11 @@
     if (!panel) return;
     const cb = panel.querySelector('#srbb-search-unblocked');
     const pill = panel.querySelector('#srbb-search-pill');
-    const rememberTerm = panel.querySelector('#srbb-remember-search-term');
     if (cb) cb.checked = !!settings.searchUnblocked;
     if (pill) {
       pill.textContent = settings.searchUnblocked ? t('on') : t('off');
       pill.classList.toggle('is-on', !!settings.searchUnblocked);
     }
-    if (rememberTerm) rememberTerm.checked = !!settings.rememberSearchTerm;
     syncProbePanelState();
   }
 
@@ -2959,26 +2916,34 @@
     return `https://store.steampowered.com/app/${appId}/${slug}/`;
   }
 
-  function handleSuggestInput(input) {
+  function handleSuggestInput(input, options = {}) {
     if (!settings.searchUnblocked) return;
     const term = input.value.trim();
     if (!term) {
-      showSuggestMessage(t('suggestEmpty'));
-      showSuggestDropdown();
+      if (suggestDebounceTimer) {
+        window.clearTimeout(suggestDebounceTimer);
+        suggestDebounceTimer = null;
+      }
+      suggestToken += 1;
+      if (options.fromFocus) {
+        showSuggestMessage(t('suggestEmpty'));
+        showSuggestDropdown();
+      } else {
+        hideSuggestDropdown();
+      }
       return;
     }
 
     if (suggestDebounceTimer) window.clearTimeout(suggestDebounceTimer);
     suggestDebounceTimer = window.setTimeout(() => {
       fetchGuestSuggestions(term);
-    }, 250);
+    }, 550);
   }
 
   async function fetchGuestSuggestions(term) {
     const token = ++suggestToken;
     updateSuggestProbeProgress(null);
-    showSuggestMessage(t('suggestLoading'));
-    showSuggestDropdown();
+    showSuggestSkeleton();
 
     try {
       let items = [];
@@ -3107,6 +3072,8 @@
     const inner = panel.querySelector('.srbb-suggest__inner');
     if (!inner) return;
 
+    panel.removeAttribute('aria-busy');
+    panel.removeAttribute('aria-label');
     inner.innerHTML = items.map((item, index) => renderSuggestItemHtml(item, index)).join('');
 
     inner.querySelectorAll('.srbb-suggest__item').forEach((el) => {
@@ -3118,12 +3085,40 @@
     showSuggestDropdown();
   }
 
+  function showSuggestSkeleton(count = 5) {
+    const panel = document.getElementById('srbb-suggest');
+    if (!panel) return;
+    const inner = panel.querySelector('.srbb-suggest__inner');
+    if (!inner) return;
+    activeSuggestIndex = -1;
+    const rows = Array.from({ length: count }, () => `
+      <div class="srbb-suggest__skel" aria-hidden="true">
+        <div class="srbb-skel srbb-suggest__skel-img"></div>
+        <div class="srbb-suggest__skel-meta">
+          <div class="srbb-skel srbb-suggest__skel-line srbb-suggest__skel-line--title"></div>
+          <div class="srbb-skel srbb-suggest__skel-line srbb-suggest__skel-line--sub"></div>
+          <div class="srbb-suggest__skel-chips">
+            <div class="srbb-skel srbb-suggest__skel-chip"></div>
+            <div class="srbb-skel srbb-suggest__skel-chip"></div>
+            <div class="srbb-skel srbb-suggest__skel-chip srbb-suggest__skel-chip--short"></div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    inner.innerHTML = rows;
+    panel.setAttribute('aria-busy', 'true');
+    panel.setAttribute('aria-label', t('suggestLoading'));
+    showSuggestDropdown();
+  }
+
   function showSuggestMessage(message) {
     const panel = document.getElementById('srbb-suggest');
     if (!panel) return;
     const inner = panel.querySelector('.srbb-suggest__inner');
     if (!inner) return;
     activeSuggestIndex = -1;
+    panel.removeAttribute('aria-busy');
+    panel.removeAttribute('aria-label');
     inner.innerHTML = `<div class="srbb-suggest__message">${escapeHtml(message)}</div>`;
     showSuggestDropdown();
   }
@@ -3140,6 +3135,8 @@
     if (!panel) return;
     panel.hidden = true;
     panel.classList.remove('is-open');
+    panel.removeAttribute('aria-busy');
+    panel.removeAttribute('aria-label');
     activeSuggestIndex = -1;
     panel.querySelectorAll('.srbb-suggest__item.is-active').forEach((el) => {
       el.classList.remove('is-active');
@@ -3156,16 +3153,30 @@
     items.forEach((el, i) => el.classList.toggle('is-active', i === activeSuggestIndex));
   }
 
-  function handleSuggestKeydown(e, input) {
+  function handleSearchKeydown(e, input) {
+    if (e.key === 'Escape') {
+      const panel = document.getElementById('srbb-suggest');
+      const suggestOpen = !!(panel && !panel.hidden);
+      if (suggestOpen) {
+        e.preventDefault();
+        hideSuggestDropdown();
+        return;
+      }
+      if (input.value) {
+        e.preventDefault();
+        clearSearchInput(input);
+        return;
+      }
+      input.blur();
+      return;
+    }
+
     if (!settings.searchUnblocked) return;
     const panel = document.getElementById('srbb-suggest');
     if (!panel || panel.hidden) return;
 
     const items = [...panel.querySelectorAll('.srbb-suggest__item')];
-    if (!items.length) {
-      if (e.key === 'Escape') hideSuggestDropdown();
-      return;
-    }
+    if (!items.length) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -3183,12 +3194,6 @@
       e.preventDefault();
       const target = items[activeSuggestIndex];
       if (target?.href) location.href = target.href;
-      return;
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      hideSuggestDropdown();
-      input.blur();
     }
   }
 
@@ -3406,6 +3411,50 @@
     mount.insertAdjacentElement('beforebegin', banner);
   }
 
+  function buildSearchPageSkeletonHtml(count = 8) {
+    const rows = Array.from({ length: count }, (_, i) => {
+      const wTitle = 42 + ((i * 17) % 38);
+      const wMeta = 28 + ((i * 11) % 30);
+      return `
+        <div class="srbb-search-skel__row" aria-hidden="true">
+          <div class="srbb-skel srbb-search-skel__cap"></div>
+          <div class="srbb-search-skel__body">
+            <div class="srbb-skel srbb-search-skel__title" style="width:${wTitle}%"></div>
+            <div class="srbb-skel srbb-search-skel__meta" style="width:${wMeta}%"></div>
+          </div>
+          <div class="srbb-skel srbb-search-skel__price"></div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="srbb-search-skel" aria-busy="true" aria-label="${escapeHtml(t('searchPageLoading'))}">
+        ${rows}
+      </div>
+    `;
+  }
+
+  function showSearchPageSkeleton(liveRoot) {
+    if (!liveRoot) return null;
+    document.getElementById('srbb-search-status')?.remove();
+    let skel = document.getElementById('srbb-search-skel');
+    if (!skel) {
+      skel = document.createElement('div');
+      skel.id = 'srbb-search-skel';
+      liveRoot.insertAdjacentElement('beforebegin', skel);
+    }
+    skel.className = 'srbb-search-skel-wrap';
+    skel.dataset.kind = 'loading';
+    skel.innerHTML = buildSearchPageSkeletonHtml();
+    skel.hidden = false;
+    liveRoot.hidden = true;
+    return skel;
+  }
+
+  function clearSearchPageSkeleton(liveRoot) {
+    document.getElementById('srbb-search-skel')?.remove();
+    if (liveRoot) liveRoot.hidden = false;
+  }
+
   async function loadGuestSearchPage(options = {}) {
     if (!settings.searchUnblocked || !isSearchPage()) return;
 
@@ -3416,16 +3465,8 @@
 
     ensureSearchBanner(mount.parentElement || mount);
 
-    const statusHost = mount.parentElement || mount;
-    let statusEl = document.getElementById('srbb-search-status');
-    if (!statusEl) {
-      statusEl = document.createElement('div');
-      statusEl.id = 'srbb-search-status';
-      statusEl.className = 'srbb-search-status';
-      mount.insertAdjacentElement('beforebegin', statusEl);
-    }
-    statusEl.textContent = t('searchPageLoading');
-    statusEl.dataset.kind = 'loading';
+    const liveRoot = findLiveSearchResultsRoot() || mount;
+    showSearchPageSkeleton(liveRoot);
 
     try {
       const targetUrl = buildTargetUrl();
@@ -3456,6 +3497,14 @@
       const remoteRoot = extractSearchResultsRoot(doc);
       if (!remoteRoot) {
         if (fromCache) invalidatePageCache(targetUrl);
+        clearSearchPageSkeleton(liveRoot);
+        let statusEl = document.getElementById('srbb-search-status');
+        if (!statusEl) {
+          statusEl = document.createElement('div');
+          statusEl.id = 'srbb-search-status';
+          statusEl.className = 'srbb-search-status';
+          liveRoot.insertAdjacentElement('beforebegin', statusEl);
+        }
         statusEl.textContent = t('searchPageNoContent');
         statusEl.dataset.kind = 'error';
         return;
@@ -3465,20 +3514,29 @@
         writePageCache(targetUrl, html);
       }
 
-      const liveRoot = findLiveSearchResultsRoot();
-      if (!liveRoot) {
-        statusEl.textContent = t('searchPageNoContent');
-        statusEl.dataset.kind = 'error';
+      const currentRoot = findLiveSearchResultsRoot() || liveRoot;
+      if (!currentRoot) {
+        clearSearchPageSkeleton(null);
         return;
       }
 
-      liveRoot.replaceWith(document.importNode(remoteRoot, true));
-      statusEl.remove();
+      document.getElementById('srbb-search-skel')?.remove();
+      document.getElementById('srbb-search-status')?.remove();
+      currentRoot.hidden = false;
+      currentRoot.replaceWith(document.importNode(remoteRoot, true));
       ensureSearchBanner(findLiveSearchResultsRoot()?.parentElement || mount.parentElement);
       decorateBlockedSearchResults();
       void probeSearchPageBlocked(token);
     } catch (err) {
       if (token !== searchPageToken) return;
+      clearSearchPageSkeleton(liveRoot);
+      let statusEl = document.getElementById('srbb-search-status');
+      if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'srbb-search-status';
+        statusEl.className = 'srbb-search-status';
+        liveRoot.insertAdjacentElement('beforebegin', statusEl);
+      }
       statusEl.textContent = t('failedLoad', {
         error: err && err.message ? err.message : String(err),
       });
@@ -3603,15 +3661,6 @@
             <span class="srbb-pill" id="srbb-search-pill">${escapeHtml(t('off'))}</span>
           </div>
           <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('searchUnblockedHint'))}</p>
-
-          <div class="srbb-panel__section srbb-panel__section--row">
-            <label class="srbb-switch">
-              <input type="checkbox" id="srbb-remember-search-term" />
-              <span class="srbb-switch__track"></span>
-              <span class="srbb-switch__label">${escapeHtml(t('rememberSearchTerm'))}</span>
-            </label>
-          </div>
-          <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('rememberSearchTermHint'))}</p>
 
           <div class="srbb-panel__section srbb-panel__section--row">
             <label class="srbb-switch">
@@ -3748,14 +3797,6 @@
     panel.querySelector('#srbb-search-unblocked')?.addEventListener('change', () => {
       saveSettings({ searchUnblocked: panel.querySelector('#srbb-search-unblocked').checked });
     });
-    panel.querySelector('#srbb-remember-search-term')?.addEventListener('change', () => {
-      const on = !!panel.querySelector('#srbb-remember-search-term').checked;
-      saveSettings({ rememberSearchTerm: on });
-      if (on) {
-        const input = getSearchInput();
-        if (input) saveSearchTerm(input.value);
-      }
-    });
     panel.querySelector('#srbb-remember-blocked')?.addEventListener('change', () => {
       saveSettings({ rememberBlockedApps: panel.querySelector('#srbb-remember-blocked').checked });
       syncBlockedAppsPanel();
@@ -3852,7 +3893,6 @@
       proxyUser: panel.querySelector('#srbb-proxy-user').value.trim(),
       proxyPass: panel.querySelector('#srbb-proxy-pass').value,
       searchUnblocked: !!panel.querySelector('#srbb-search-unblocked')?.checked,
-      rememberSearchTerm: !!panel.querySelector('#srbb-remember-search-term')?.checked,
       rememberBlockedApps: !!panel.querySelector('#srbb-remember-blocked')?.checked,
       markBlockedInSearch: !!panel.querySelector('#srbb-mark-blocked-search')?.checked,
       probeBlockedInSearch: !!panel.querySelector('#srbb-probe-blocked')?.checked,
@@ -4412,6 +4452,66 @@
         color: #8f98a0;
         font: 12px/1.4 "Motiva Sans", Arial, Helvetica, sans-serif;
       }
+      .srbb-skel {
+        position: relative;
+        overflow: hidden;
+        background: rgba(255,255,255,.06);
+        border-radius: 2px;
+      }
+      .srbb-skel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(102,192,244,.12) 45%,
+          rgba(199,213,224,.18) 55%,
+          transparent 100%
+        );
+        animation: srbb-skel-shimmer 1.25s ease-in-out infinite;
+      }
+      @keyframes srbb-skel-shimmer {
+        100% { transform: translateX(100%); }
+      }
+      .srbb-suggest__skel {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        border-top: 1px solid rgba(0,0,0,.35);
+      }
+      .srbb-suggest__skel:first-child { border-top: 0; }
+      .srbb-suggest__skel-img {
+        width: 184px;
+        height: 69px;
+        flex: 0 0 auto;
+        background: #0e1620;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.45);
+      }
+      .srbb-suggest__skel-meta {
+        min-width: 0;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 4px;
+      }
+      .srbb-suggest__skel-line { height: 12px; }
+      .srbb-suggest__skel-line--title { width: 58%; }
+      .srbb-suggest__skel-line--sub { width: 34%; height: 10px; }
+      .srbb-suggest__skel-chips {
+        display: flex;
+        gap: 6px;
+        margin-top: 2px;
+      }
+      .srbb-suggest__skel-chip {
+        width: 54px;
+        height: 16px;
+        border-radius: 2px;
+      }
+      .srbb-suggest__skel-chip--short { width: 36px; }
       .srbb-suggest__item {
         display: flex;
         align-items: flex-start;
@@ -4644,6 +4744,57 @@
         background: #3a1f1f;
         border-color: #6b2a2a;
         color: #ffc9c9;
+      }
+      .srbb-search-skel-wrap {
+        margin: 0 0 12px;
+      }
+      .srbb-search-skel {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        border: 1px solid #000;
+        border-radius: 3px;
+        overflow: hidden;
+        background: #1b2838;
+      }
+      .srbb-search-skel__row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px;
+        background: rgba(0,0,0,.18);
+        border-top: 1px solid rgba(0,0,0,.35);
+      }
+      .srbb-search-skel__row:first-child { border-top: 0; }
+      .srbb-search-skel__row:nth-child(even) {
+        background: rgba(0,0,0,.28);
+      }
+      .srbb-search-skel__cap {
+        width: 120px;
+        height: 45px;
+        flex: 0 0 auto;
+        background: #0e1620;
+      }
+      .srbb-search-skel__body {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .srbb-search-skel__title {
+        height: 14px;
+        max-width: 420px;
+      }
+      .srbb-search-skel__meta {
+        height: 10px;
+        max-width: 260px;
+      }
+      .srbb-search-skel__price {
+        width: 56px;
+        height: 14px;
+        flex: 0 0 auto;
+        margin-left: auto;
       }
 
       .srbb-search-probe {
