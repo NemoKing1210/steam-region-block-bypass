@@ -1,0 +1,23 @@
+{
+  "name": "steam-region-block-bypass",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Violentmonkey/Tampermonkey userscript + optional local proxy gateway for Steam region-blocked store pages",
+  "homepage": "https://github.com/NemoKing1210/steam-region-block-bypass",
+  "bugs": {
+    "url": "https://github.com/NemoKing1210/steam-region-block-bypass/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NemoKing1210/steam-region-block-bypass.git"
+  },
+  "license": "MIT",
+  "author": "NemoKing1210",
+  "scripts": {
+    "gateway": "node proxy-gateway.mjs"
+  },
+  "dependencies": {
+    "undici": "^6.21.0"
+  }
+}
