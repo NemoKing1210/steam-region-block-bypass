@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.10.0
+// @version           1.11.0
 // @description       View region-blocked Steam store pages and guest search via anonymous fetch (no account cookies); optional proxy gateway
 // @description:ru    Просмотр заблокированных страниц и гостевой поиск Steam без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 查看区域限制页面及访客搜索 Steam 商店；可选代理网关
@@ -52,6 +52,7 @@
   /** Soft cap so GM storage does not grow without bound */
   const CACHE_MAX_ENTRIES = 30;
   const BLOCKED_APPS_MAX_ENTRIES = 500;
+  const PROBE_CONCURRENCY_MAX = 5;
   /** Upper bound for the settings field (7 days) */
   const CACHE_MINUTES_MAX = 10080;
   const DEFAULT_SETTINGS = {
@@ -74,6 +75,12 @@
     rememberBlockedApps: true,
     /** Highlight remembered blocked apps in guest search */
     markBlockedInSearch: true,
+    /** Probe search results with account cookies to detect region locks */
+    probeBlockedInSearch: true,
+    /** suggest | search | both */
+    probeBlockedScope: 'both',
+    /** Parallel account probes (1–5) */
+    probeBlockedConcurrency: 3,
   };
 
   const SUPPORTED_LOCALES = ['en', 'ru', 'zh-CN', 'es', 'pt-BR', 'de', 'fr', 'ja', 'ko', 'pl'];
@@ -187,6 +194,19 @@
         'When Steam shows a region error on an app page, save its ID locally for guest-search highlights.',
       markBlockedInSearch: 'Highlight blocked in search',
       markBlockedInSearchHint: 'Show a region-blocked badge on saved games in guest search results.',
+      probeBlockedInSearch: 'Auto-detect blocked in search',
+      probeBlockedInSearchHint:
+        'After guest search renders, open each app page with your Steam cookies. Region-locked games are added to the blocked list. Requires being signed in.',
+      probeBlockedScope: 'Check in',
+      probeBlockedScopeBoth: 'Suggestions and search page',
+      probeBlockedScopeSuggest: 'Suggestions only',
+      probeBlockedScopeSearch: 'Search page only',
+      probeBlockedConcurrency: 'Parallel checks',
+      probeBlockedConcurrencyHint: 'How many app pages to probe at once (lower is gentler on Steam).',
+      probeProgress: 'Checking region locks… {done}/{total}',
+      probeFound: 'Added {count} blocked game(s)',
+      probeNeedLogin: 'Sign in to Steam to auto-detect blocked games.',
+      probeNeedRemember: 'Turn on “Remember blocked games” to save auto-detected apps.',
       blockedAppsCount: '{count} blocked games saved',
       clearBlockedApps: 'Clear list',
       searchPageLoading: 'Loading search results without account cookies…',
@@ -278,6 +298,19 @@
         'При ошибке региона на странице приложения сохранять её ID локально для подсветки в гостевом поиске.',
       markBlockedInSearch: 'Подсвечивать в поиске',
       markBlockedInSearchHint: 'Показывать метку «регион заблокирован» у сохранённых игр в гостевом поиске.',
+      probeBlockedInSearch: 'Автодетект блокировок в поиске',
+      probeBlockedInSearchHint:
+        'После отрисовки гостевого поиска открывает страницы приложений с вашими cookies Steam. Игры с региональной блокировкой добавляются в список. Нужен вход в аккаунт.',
+      probeBlockedScope: 'Где проверять',
+      probeBlockedScopeBoth: 'Подсказки и страница поиска',
+      probeBlockedScopeSuggest: 'Только подсказки',
+      probeBlockedScopeSearch: 'Только страница поиска',
+      probeBlockedConcurrency: 'Параллельные проверки',
+      probeBlockedConcurrencyHint: 'Сколько страниц приложений проверять одновременно (меньше — мягче для Steam).',
+      probeProgress: 'Проверка региональных блокировок… {done}/{total}',
+      probeFound: 'Добавлено заблокированных: {count}',
+      probeNeedLogin: 'Войдите в Steam, чтобы автоматически находить заблокированные игры.',
+      probeNeedRemember: 'Включите «Запоминать заблокированные игры», чтобы сохранять найденные.',
       blockedAppsCount: 'Сохранено заблокированных игр: {count}',
       clearBlockedApps: 'Очистить список',
       searchPageLoading: 'Загрузка результатов поиска без cookies аккаунта…',
@@ -361,6 +394,19 @@
       rememberBlockedAppsHint: '当 Steam 在应用页显示区域错误时，本地保存其 ID，以便在访客搜索中高亮。',
       markBlockedInSearch: '在搜索中高亮',
       markBlockedInSearchHint: '在访客搜索结果中为已保存的游戏显示“地区限制”标记。',
+      probeBlockedInSearch: '自动检测搜索中的封锁',
+      probeBlockedInSearchHint:
+        '访客搜索渲染后，用您的 Steam Cookie 打开各应用页。区域受限游戏会加入封锁列表。需要已登录。',
+      probeBlockedScope: '检查范围',
+      probeBlockedScopeBoth: '建议与搜索页',
+      probeBlockedScopeSuggest: '仅建议',
+      probeBlockedScopeSearch: '仅搜索页',
+      probeBlockedConcurrency: '并行检查数',
+      probeBlockedConcurrencyHint: '同时探测的应用页数量（越小对 Steam 越温和）。',
+      probeProgress: '正在检查区域限制… {done}/{total}',
+      probeFound: '已添加 {count} 个封锁游戏',
+      probeNeedLogin: '请登录 Steam 以自动检测封锁游戏。',
+      probeNeedRemember: '请开启“记住被封锁的游戏”以保存自动检测结果。',
       blockedAppsCount: '已保存 {count} 个被封锁游戏',
       clearBlockedApps: '清空列表',
       searchPageLoading: '正在以无账号 Cookie 加载搜索结果…',
@@ -452,6 +498,19 @@
         'Si Steam muestra un error regional en una app, guarda su ID localmente para resaltarla en la búsqueda invitado.',
       markBlockedInSearch: 'Resaltar en búsqueda',
       markBlockedInSearchHint: 'Muestra una insignia de región bloqueada en juegos guardados en la búsqueda invitado.',
+      probeBlockedInSearch: 'Detectar bloqueados en la búsqueda',
+      probeBlockedInSearchHint:
+        'Tras renderizar la búsqueda invitado, abre cada app con tus cookies de Steam. Las bloqueadas por región se añaden a la lista. Requiere iniciar sesión.',
+      probeBlockedScope: 'Comprobar en',
+      probeBlockedScopeBoth: 'Sugerencias y página de búsqueda',
+      probeBlockedScopeSuggest: 'Solo sugerencias',
+      probeBlockedScopeSearch: 'Solo página de búsqueda',
+      probeBlockedConcurrency: 'Comprobaciones en paralelo',
+      probeBlockedConcurrencyHint: 'Cuántas páginas de app sondear a la vez (menos es más suave con Steam).',
+      probeProgress: 'Comprobando bloqueos regionales… {done}/{total}',
+      probeFound: 'Añadidos {count} juego(s) bloqueado(s)',
+      probeNeedLogin: 'Inicia sesión en Steam para detectar juegos bloqueados automáticamente.',
+      probeNeedRemember: 'Activa «Recordar juegos bloqueados» para guardar los detectados.',
       blockedAppsCount: '{count} juegos bloqueados guardados',
       clearBlockedApps: 'Borrar lista',
       searchPageLoading: 'Cargando resultados de búsqueda sin cookies de cuenta…',
@@ -543,6 +602,19 @@
         'Quando a Steam mostrar erro regional numa app, salva o ID localmente para destacar na busca convidado.',
       markBlockedInSearch: 'Destacar na busca',
       markBlockedInSearchHint: 'Mostra um selo de região bloqueada nos jogos salvos na busca convidado.',
+      probeBlockedInSearch: 'Detectar bloqueados na busca',
+      probeBlockedInSearchHint:
+        'Após renderizar a busca convidado, abre cada app com seus cookies da Steam. Jogos bloqueados por região entram na lista. É preciso estar logado.',
+      probeBlockedScope: 'Verificar em',
+      probeBlockedScopeBoth: 'Sugestões e página de busca',
+      probeBlockedScopeSuggest: 'Somente sugestões',
+      probeBlockedScopeSearch: 'Somente página de busca',
+      probeBlockedConcurrency: 'Verificações em paralelo',
+      probeBlockedConcurrencyHint: 'Quantas páginas de app sondar ao mesmo tempo (menor = mais suave com a Steam).',
+      probeProgress: 'Verificando bloqueios regionais… {done}/{total}',
+      probeFound: 'Adicionado(s) {count} jogo(s) bloqueado(s)',
+      probeNeedLogin: 'Entre na Steam para detectar jogos bloqueados automaticamente.',
+      probeNeedRemember: 'Ative «Lembrar jogos bloqueados» para salvar os detectados.',
       blockedAppsCount: '{count} jogos bloqueados salvos',
       clearBlockedApps: 'Limpar lista',
       searchPageLoading: 'Carregando resultados da busca sem cookies da conta…',
@@ -634,6 +706,19 @@
         'Wenn Steam auf einer App-Seite einen Regionsfehler zeigt, ID lokal speichern für Hervorhebung in der Gast-Suche.',
       markBlockedInSearch: 'In Suche hervorheben',
       markBlockedInSearchHint: 'Zeigt ein Regions-gesperrt-Abzeichen für gespeicherte Spiele in der Gast-Suche.',
+      probeBlockedInSearch: 'Gesperrte in Suche erkennen',
+      probeBlockedInSearchHint:
+        'Nach der Gast-Suche werden App-Seiten mit Ihren Steam-Cookies geladen. Regional gesperrte Spiele kommen auf die Liste. Anmeldung erforderlich.',
+      probeBlockedScope: 'Prüfen in',
+      probeBlockedScopeBoth: 'Vorschläge und Suchseite',
+      probeBlockedScopeSuggest: 'Nur Vorschläge',
+      probeBlockedScopeSearch: 'Nur Suchseite',
+      probeBlockedConcurrency: 'Parallele Prüfungen',
+      probeBlockedConcurrencyHint: 'Wie viele App-Seiten gleichzeitig geprüft werden (niedriger = schonender für Steam).',
+      probeProgress: 'Regionsperren werden geprüft… {done}/{total}',
+      probeFound: '{count} gesperrte(s) Spiel(e) hinzugefügt',
+      probeNeedLogin: 'Melden Sie sich bei Steam an, um gesperrte Spiele automatisch zu erkennen.',
+      probeNeedRemember: 'Aktivieren Sie „Gesperrte Spiele merken“, um erkannte Apps zu speichern.',
       blockedAppsCount: '{count} gesperrte Spiele gespeichert',
       clearBlockedApps: 'Liste leeren',
       searchPageLoading: 'Suchergebnisse werden ohne Account-Cookies geladen…',
@@ -725,6 +810,19 @@
         'Quand Steam affiche une erreur régionale sur une app, enregistrer son ID localement pour la recherche invité.',
       markBlockedInSearch: 'Surligner dans la recherche',
       markBlockedInSearchHint: 'Affiche un badge région bloquée sur les jeux enregistrés dans la recherche invité.',
+      probeBlockedInSearch: 'Détecter les bloqués dans la recherche',
+      probeBlockedInSearchHint:
+        'Après l’affichage de la recherche invité, ouvre chaque page d’app avec vos cookies Steam. Les jeux bloqués par région sont ajoutés à la liste. Connexion requise.',
+      probeBlockedScope: 'Vérifier dans',
+      probeBlockedScopeBoth: 'Suggestions et page de recherche',
+      probeBlockedScopeSuggest: 'Suggestions uniquement',
+      probeBlockedScopeSearch: 'Page de recherche uniquement',
+      probeBlockedConcurrency: 'Vérifications parallèles',
+      probeBlockedConcurrencyHint: 'Nombre de pages d’app sondées en même temps (plus bas = plus doux pour Steam).',
+      probeProgress: 'Vérification des blocages régionaux… {done}/{total}',
+      probeFound: '{count} jeu(x) bloqué(s) ajouté(s)',
+      probeNeedLogin: 'Connectez-vous à Steam pour détecter automatiquement les jeux bloqués.',
+      probeNeedRemember: 'Activez « Mémoriser les jeux bloqués » pour enregistrer les détections.',
       blockedAppsCount: '{count} jeux bloqués enregistrés',
       clearBlockedApps: 'Vider la liste',
       searchPageLoading: 'Chargement des résultats sans cookies de compte…',
@@ -814,6 +912,19 @@
       rememberBlockedAppsHint: 'アプリページで地域エラーが出たとき、IDをローカル保存しゲスト検索で強調表示します。',
       markBlockedInSearch: '検索で強調',
       markBlockedInSearchHint: 'ゲスト検索で保存済みゲームに地域制限バッジを表示します。',
+      probeBlockedInSearch: '検索でブロックを自動検出',
+      probeBlockedInSearchHint:
+        'ゲスト検索の描画後、Steam Cookie で各アプリページを開きます。地域制限のゲームをリストに追加します。ログインが必要です。',
+      probeBlockedScope: 'チェック対象',
+      probeBlockedScopeBoth: '候補と検索ページ',
+      probeBlockedScopeSuggest: '候補のみ',
+      probeBlockedScopeSearch: '検索ページのみ',
+      probeBlockedConcurrency: '並列チェック数',
+      probeBlockedConcurrencyHint: '同時に調べるアプリページ数（小さいほど Steam に優しい）。',
+      probeProgress: '地域制限を確認中… {done}/{total}',
+      probeFound: 'ブロックゲームを {count} 件追加',
+      probeNeedLogin: 'ブロックゲームを自動検出するには Steam にログインしてください。',
+      probeNeedRemember: '検出結果を保存するには「ブロックされたゲームを記憶」をオンにしてください。',
       blockedAppsCount: '保存済みブロックゲーム: {count}',
       clearBlockedApps: 'リストを消去',
       searchPageLoading: 'アカウントCookieなしで検索結果を読み込み中…',
@@ -903,6 +1014,19 @@
       rememberBlockedAppsHint: '앱 페이지에서 지역 오류가 나오면 ID를 로컬에 저장해 게스트 검색에서 강조합니다.',
       markBlockedInSearch: '검색에서 강조',
       markBlockedInSearchHint: '게스트 검색에서 저장된 게임에 지역 제한 배지를 표시합니다.',
+      probeBlockedInSearch: '검색에서 차단 자동 감지',
+      probeBlockedInSearchHint:
+        '게스트 검색 렌더 후 Steam 쿠키로 각 앱 페이지를 엽니다. 지역 제한 게임을 목록에 추가합니다. 로그인이 필요합니다.',
+      probeBlockedScope: '확인 범위',
+      probeBlockedScopeBoth: '제안 및 검색 페이지',
+      probeBlockedScopeSuggest: '제안만',
+      probeBlockedScopeSearch: '검색 페이지만',
+      probeBlockedConcurrency: '병렬 확인 수',
+      probeBlockedConcurrencyHint: '동시에 검사할 앱 페이지 수(낮을수록 Steam에 부담이 적음).',
+      probeProgress: '지역 제한 확인 중… {done}/{total}',
+      probeFound: '차단 게임 {count}개 추가됨',
+      probeNeedLogin: '차단 게임을 자동 감지하려면 Steam에 로그인하세요.',
+      probeNeedRemember: '감지 결과를 저장하려면 «차단된 게임 기억»을 켜세요.',
       blockedAppsCount: '저장된 차단 게임 {count}개',
       clearBlockedApps: '목록 지우기',
       searchPageLoading: '계정 쿠키 없이 검색 결과를 불러오는 중…',
@@ -994,6 +1118,19 @@
         'Gdy Steam pokaże błąd regionu na stronie aplikacji, zapisz ID lokalnie do podświetlenia w wyszukiwaniu gościa.',
       markBlockedInSearch: 'Podświetlaj w wyszukiwaniu',
       markBlockedInSearchHint: 'Pokazuj odznakę zablokowanego regionu dla zapisanych gier w wyszukiwaniu gościa.',
+      probeBlockedInSearch: 'Wykrywaj zablokowane w wyszukiwaniu',
+      probeBlockedInSearchHint:
+        'Po wyrenderowaniu wyszukiwania gościa otwiera strony aplikacji z cookies Steam. Gry z blokadą regionu trafiają na listę. Wymagane logowanie.',
+      probeBlockedScope: 'Sprawdzaj w',
+      probeBlockedScopeBoth: 'Podpowiedzi i strona wyszukiwania',
+      probeBlockedScopeSuggest: 'Tylko podpowiedzi',
+      probeBlockedScopeSearch: 'Tylko strona wyszukiwania',
+      probeBlockedConcurrency: 'Równoległe sprawdzenia',
+      probeBlockedConcurrencyHint: 'Ile stron aplikacji sprawdzać naraz (mniej = łagodniej dla Steam).',
+      probeProgress: 'Sprawdzanie blokad regionu… {done}/{total}',
+      probeFound: 'Dodano zablokowanych gier: {count}',
+      probeNeedLogin: 'Zaloguj się do Steam, aby automatycznie wykrywać zablokowane gry.',
+      probeNeedRemember: 'Włącz «Zapamiętuj zablokowane gry», aby zapisywać wykryte pozycje.',
       blockedAppsCount: 'Zapisane zablokowane gry: {count}',
       clearBlockedApps: 'Wyczyść listę',
       searchPageLoading: 'Ładowanie wyników wyszukiwania bez cookies konta…',
@@ -1106,6 +1243,10 @@
   let historyHooked = false;
   /** @type {Set<string> | null} */
   let blockedAppsIndex = null;
+  /** Session cache of probed app IDs that were not region-blocked: id → status */
+  const probeSessionCache = new Map();
+  /** @type {Array<object>} */
+  let lastSuggestItems = [];
 
   init();
 
@@ -1135,6 +1276,8 @@
     if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETTINGS };
     const merged = { ...DEFAULT_SETTINGS, ...raw };
     merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
+    merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
+    merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
     return merged;
   }
 
@@ -1142,6 +1285,8 @@
     const prevSearch = settings.searchUnblocked;
     settings = { ...settings, ...next };
     settings.cacheMinutes = normalizeCacheMinutes(settings.cacheMinutes);
+    settings.probeBlockedScope = normalizeProbeScope(settings.probeBlockedScope);
+    settings.probeBlockedConcurrency = normalizeProbeConcurrency(settings.probeBlockedConcurrency);
     GM_setValue(STORAGE_KEY, settings);
     updateButtonState();
     if ('searchUnblocked' in next && prevSearch !== settings.searchUnblocked) {
@@ -1154,6 +1299,18 @@
     const n = Math.round(Number(value));
     if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.cacheMinutes;
     return Math.min(n, CACHE_MINUTES_MAX);
+  }
+
+  function normalizeProbeScope(value) {
+    return value === 'suggest' || value === 'search' || value === 'both'
+      ? value
+      : DEFAULT_SETTINGS.probeBlockedScope;
+  }
+
+  function normalizeProbeConcurrency(value) {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return DEFAULT_SETTINGS.probeBlockedConcurrency;
+    return Math.min(PROBE_CONCURRENCY_MAX, Math.max(1, n));
   }
 
   function getCacheTtlMs() {
@@ -1458,6 +1615,124 @@
 
       GM_xmlhttpRequest(opts);
     });
+  }
+
+  /**
+   * Account-session request (browser cookies). Never use proxy / guest Cookie override —
+   * we need the logged-in store region view to detect locks.
+   */
+  function gmSessionRequest(url) {
+    return new Promise((resolve, reject) => {
+      const steamLang = getSteamStoreLanguage();
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url,
+        anonymous: false,
+        timeout: 25000,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language':
+            ACCEPT_LANG_BY_STEAM[steamLang] || navigator.language || 'en-US,en;q=0.9',
+        },
+        onload: (res) => resolve(res),
+        onerror: (res) =>
+          reject(new Error(res && res.statusText ? res.statusText : t('networkError'))),
+        ontimeout: () => reject(new Error(t('requestTimeout'))),
+      });
+    });
+  }
+
+  function shouldProbeBlockedScope(scope) {
+    if (!settings.probeBlockedInSearch) return false;
+    if (!settings.rememberBlockedApps) return false;
+    if (!isHostLoggedIn()) return false;
+    const s = normalizeProbeScope(settings.probeBlockedScope);
+    return s === 'both' || s === scope;
+  }
+
+  async function mapPool(items, limit, fn) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, async () => {
+      while (nextIndex < items.length) {
+        const idx = nextIndex++;
+        results[idx] = await fn(items[idx], idx);
+      }
+    });
+    await Promise.all(workers);
+    return results;
+  }
+
+  async function probeAppRegionStatus(appId) {
+    const targetUrl = buildTargetUrl(`https://store.steampowered.com/app/${appId}/`);
+    const response = await gmSessionRequest(targetUrl);
+    if (response.status < 200 || response.status >= 400) return 'unknown';
+    const doc = new DOMParser().parseFromString(response.responseText || '', 'text/html');
+    if (isRegionBlockedPage(doc)) return 'blocked';
+    if (doc.querySelector('#agecheck_form, .agegate_birthday_desc, #app_agegate')) {
+      return 'agegate';
+    }
+    if (extractGamePageRoot(doc)) return 'ok';
+    return 'unknown';
+  }
+
+  function dedupeProbeApps(apps) {
+    const seen = new Set();
+    const out = [];
+    for (const app of apps) {
+      const id = app && app.id != null ? String(app.id) : '';
+      if (!/^\d+$/.test(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, name: String(app.name || '').trim(), row: app.row || null });
+    }
+    return out;
+  }
+
+  /**
+   * @param {Array<{id:string,name?:string,row?:Element|null}>} apps
+   * @param {{ isCancelled?: () => boolean, onProgress?: Function, onBlocked?: Function, onItemStart?: Function, onItemDone?: Function }} hooks
+   */
+  async function runBlockedProbe(apps, hooks = {}) {
+    const queue = dedupeProbeApps(apps).filter((app) => {
+      if (isBlockedApp(app.id)) return false;
+      if (probeSessionCache.has(app.id)) return false;
+      return true;
+    });
+
+    const total = queue.length;
+    let done = 0;
+    let found = 0;
+
+    if (!total) {
+      hooks.onProgress?.({ done: 0, total: 0, found: 0 });
+      return { found: 0, checked: 0 };
+    }
+
+    hooks.onProgress?.({ done: 0, total, found: 0 });
+
+    await mapPool(queue, normalizeProbeConcurrency(settings.probeBlockedConcurrency), async (app) => {
+      if (hooks.isCancelled?.()) return;
+      hooks.onItemStart?.(app);
+      try {
+        const status = await probeAppRegionStatus(app.id);
+        if (hooks.isCancelled?.()) return;
+        if (status === 'blocked') {
+          rememberBlockedApp(app.id, app.name);
+          found += 1;
+          hooks.onBlocked?.(app);
+        } else {
+          probeSessionCache.set(app.id, status);
+        }
+      } catch {
+        /* leave uncached for a later retry */
+      } finally {
+        done += 1;
+        hooks.onItemDone?.(app);
+        hooks.onProgress?.({ done, total, found });
+      }
+    });
+
+    return { found, checked: done };
   }
 
   async function bypassRegionBlock(options = {}) {
@@ -2328,12 +2603,123 @@
     panel.className = 'srbb-suggest';
     panel.hidden = true;
     panel.setAttribute('role', 'listbox');
-    panel.innerHTML = `<div class="srbb-suggest__inner"></div>`;
+    panel.innerHTML = `
+      <div class="srbb-suggest__inner"></div>
+      <div class="srbb-suggest__probe" id="srbb-suggest-probe" hidden>
+        <div class="srbb-suggest__probe-track"><div class="srbb-suggest__probe-fill" id="srbb-suggest-probe-fill"></div></div>
+        <div class="srbb-suggest__probe-label" id="srbb-suggest-probe-label"></div>
+      </div>
+    `;
     mount.appendChild(panel);
 
     panel.addEventListener('mousedown', (e) => {
       e.preventDefault();
     });
+  }
+
+  function updateSuggestProbeProgress(progress) {
+    const bar = document.getElementById('srbb-suggest-probe');
+    const fill = document.getElementById('srbb-suggest-probe-fill');
+    const label = document.getElementById('srbb-suggest-probe-label');
+    if (!bar || !fill || !label) return;
+
+    if (!progress || !progress.total) {
+      bar.hidden = true;
+      return;
+    }
+
+    bar.hidden = false;
+    const pct = Math.round((progress.done / progress.total) * 100);
+    fill.style.width = `${pct}%`;
+    label.textContent = t('probeProgress', { done: progress.done, total: progress.total });
+  }
+
+  function finishSuggestProbe(found) {
+    const bar = document.getElementById('srbb-suggest-probe');
+    const fill = document.getElementById('srbb-suggest-probe-fill');
+    const label = document.getElementById('srbb-suggest-probe-label');
+    if (!bar || !fill || !label) return;
+    if (found > 0) {
+      bar.hidden = false;
+      fill.style.width = '100%';
+      label.textContent = t('probeFound', { count: found });
+      window.setTimeout(() => {
+        if (label.textContent === t('probeFound', { count: found })) {
+          bar.hidden = true;
+        }
+      }, 2200);
+    } else {
+      bar.hidden = true;
+    }
+  }
+
+  function findSuggestItemByAppId(appId) {
+    const panel = document.getElementById('srbb-suggest');
+    if (!panel) return null;
+    const id = String(appId);
+    return (
+      [...panel.querySelectorAll('.srbb-suggest__item[data-srbb-app-id]')].find(
+        (el) => el.getAttribute('data-srbb-app-id') === id
+      ) || null
+    );
+  }
+
+  function setSuggestItemProbing(appId, probing) {
+    const el = findSuggestItemByAppId(appId);
+    if (!el) return;
+    el.classList.toggle('srbb-suggest__item--probing', !!probing);
+    const spin = el.querySelector('.srbb-suggest__probe-spin');
+    if (spin) spin.hidden = !probing;
+  }
+
+  function markSuggestItemBlockedLive(appId) {
+    const el = findSuggestItemByAppId(appId);
+    if (!el) return;
+    el.classList.add('srbb-suggest__item--blocked');
+    const titleRow = el.querySelector('.srbb-suggest__title-row');
+    if (titleRow && !titleRow.querySelector('.srbb-suggest__blocked-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'srbb-suggest__blocked-badge';
+      badge.textContent = t('suggestRegionBlocked');
+      titleRow.appendChild(badge);
+    }
+  }
+
+  async function probeSuggestBlocked(items, token) {
+    if (!shouldProbeBlockedScope('suggest')) {
+      updateSuggestProbeProgress(null);
+      return;
+    }
+
+    const apps = items
+      .filter((item) => item && item.id && String(item.type || '').toLowerCase() !== 'bundle')
+      .map((item) => ({ id: item.id, name: item.name }));
+
+    const result = await runBlockedProbe(apps, {
+      isCancelled: () => token !== suggestToken,
+      onProgress: (p) => {
+        if (token !== suggestToken) return;
+        updateSuggestProbeProgress(p);
+      },
+      onItemStart: (app) => {
+        if (token !== suggestToken) return;
+        setSuggestItemProbing(app.id, true);
+      },
+      onItemDone: (app) => {
+        if (token !== suggestToken) return;
+        setSuggestItemProbing(app.id, false);
+      },
+      onBlocked: (app) => {
+        if (token !== suggestToken) return;
+        markSuggestItemBlockedLive(app.id);
+      },
+    });
+
+    if (token !== suggestToken) return;
+    finishSuggestProbe(result.found);
+    if (result.found > 0 && lastSuggestItems.length) {
+      renderSuggestItems(prepareSuggestItems(lastSuggestItems));
+    }
   }
 
   function bindSearchInput(form) {
@@ -2397,6 +2783,31 @@
       pill.classList.toggle('is-on', !!settings.searchUnblocked);
     }
     if (rememberTerm) rememberTerm.checked = !!settings.rememberSearchTerm;
+    syncProbePanelState();
+  }
+
+  function syncProbePanelState() {
+    const panel = document.getElementById('srbb-panel');
+    if (!panel) return;
+    const enabled = panel.querySelector('#srbb-probe-blocked');
+    const fields = panel.querySelector('#srbb-probe-fields');
+    const note = panel.querySelector('#srbb-probe-note');
+    const scope = panel.querySelector('#srbb-probe-scope');
+    const concurrency = panel.querySelector('#srbb-probe-concurrency');
+    const on = !!settings.probeBlockedInSearch;
+    if (enabled) enabled.checked = on;
+    if (fields) fields.classList.toggle('is-disabled', !on);
+    if (scope) scope.value = normalizeProbeScope(settings.probeBlockedScope);
+    if (concurrency) {
+      concurrency.value = String(normalizeProbeConcurrency(settings.probeBlockedConcurrency));
+    }
+    if (note) {
+      let msg = '';
+      if (on && !isHostLoggedIn()) msg = t('probeNeedLogin');
+      else if (on && !settings.rememberBlockedApps) msg = t('probeNeedRemember');
+      note.textContent = msg;
+      note.hidden = !msg;
+    }
   }
 
   function buildSuggestUrl(term) {
@@ -2565,6 +2976,7 @@
 
   async function fetchGuestSuggestions(term) {
     const token = ++suggestToken;
+    updateSuggestProbeProgress(null);
     showSuggestMessage(t('suggestLoading'));
     showSuggestDropdown();
 
@@ -2593,7 +3005,9 @@
       items.forEach((item) => {
         if (isBlockedApp(item.id)) touchBlockedAppName(item.id, item.name);
       });
+      lastSuggestItems = items;
       renderSuggestItems(prepareSuggestItems(items));
+      void probeSuggestBlocked(items, token);
     } catch (err) {
       if (token !== suggestToken) return;
       showSuggestMessage(
@@ -2664,11 +3078,12 @@
     const img = item.img || '';
     const blockedClass = item.regionBlocked ? ' srbb-suggest__item--blocked' : '';
     return `
-      <a class="srbb-suggest__item${blockedClass}" role="option" data-srbb-suggest-index="${index}" href="${escapeHtml(href)}">
+      <a class="srbb-suggest__item${blockedClass}" role="option" data-srbb-suggest-index="${index}" data-srbb-app-id="${escapeHtml(String(item.id))}" href="${escapeHtml(href)}">
         ${img ? `<img class="srbb-suggest__img" alt="" src="${escapeHtml(img)}" loading="lazy" />` : ''}
         <div class="srbb-suggest__meta">
           <div class="srbb-suggest__title-row">
             <div class="srbb-suggest__name">${escapeHtml(item.name)}</div>
+            <span class="srbb-suggest__probe-spin" hidden aria-hidden="true"></span>
             ${buildSuggestBlockedBadgeHtml(item)}
           </div>
           <div class="srbb-suggest__details">
@@ -2729,6 +3144,7 @@
     panel.querySelectorAll('.srbb-suggest__item.is-active').forEach((el) => {
       el.classList.remove('is-active');
     });
+    updateSuggestProbeProgress(null);
   }
 
   function setActiveSuggestItem(index) {
@@ -2855,6 +3271,125 @@
     });
   }
 
+  function collectSearchResultApps(root = document) {
+    const rows = root.querySelectorAll(
+      '#search_resultsRows .search_result_row, a.search_result_row, .search_result_row'
+    );
+    const apps = [];
+    rows.forEach((row) => {
+      const link =
+        row.matches('a[href*="/app/"]') ? row : row.querySelector('a[href*="/app/"]');
+      const appId = link ? getAppIdFromUrl(link.href) : null;
+      if (!appId) return;
+      const name =
+        row.querySelector('.title, .search_name, .search_title, .col.search_name')?.textContent?.trim() ||
+        '';
+      apps.push({ id: appId, name, row });
+    });
+    return apps;
+  }
+
+  function ensureSearchProbeStatus(mount) {
+    let statusEl = document.getElementById('srbb-search-probe');
+    if (statusEl) return statusEl;
+    const host = mount?.parentElement || mount || findLiveSearchResultsRoot()?.parentElement;
+    if (!host) return null;
+    statusEl = document.createElement('div');
+    statusEl.id = 'srbb-search-probe';
+    statusEl.className = 'srbb-search-probe';
+    statusEl.hidden = true;
+    statusEl.innerHTML = `
+      <div class="srbb-search-probe__row">
+        <span class="srbb-search-probe__spin" aria-hidden="true"></span>
+        <span class="srbb-search-probe__label" id="srbb-search-probe-label"></span>
+      </div>
+      <div class="srbb-search-probe__track"><div class="srbb-search-probe__fill" id="srbb-search-probe-fill"></div></div>
+    `;
+    const banner = document.getElementById('srbb-search-banner');
+    if (banner) banner.insertAdjacentElement('afterend', statusEl);
+    else host.insertAdjacentElement('afterbegin', statusEl);
+    return statusEl;
+  }
+
+  function updateSearchProbeProgress(progress) {
+    const bar = document.getElementById('srbb-search-probe');
+    const fill = document.getElementById('srbb-search-probe-fill');
+    const label = document.getElementById('srbb-search-probe-label');
+    if (!bar || !fill || !label) return;
+    if (!progress || !progress.total) {
+      bar.hidden = true;
+      bar.dataset.kind = '';
+      return;
+    }
+    bar.hidden = false;
+    bar.dataset.kind = 'loading';
+    fill.style.width = `${Math.round((progress.done / progress.total) * 100)}%`;
+    label.textContent = t('probeProgress', { done: progress.done, total: progress.total });
+  }
+
+  function finishSearchProbe(found) {
+    const bar = document.getElementById('srbb-search-probe');
+    const fill = document.getElementById('srbb-search-probe-fill');
+    const label = document.getElementById('srbb-search-probe-label');
+    if (!bar || !fill || !label) return;
+    if (found > 0) {
+      bar.hidden = false;
+      bar.dataset.kind = 'done';
+      fill.style.width = '100%';
+      label.textContent = t('probeFound', { count: found });
+      window.setTimeout(() => {
+        if (bar.dataset.kind === 'done') bar.hidden = true;
+      }, 2800);
+    } else {
+      bar.hidden = true;
+      bar.dataset.kind = '';
+    }
+  }
+
+  async function probeSearchPageBlocked(token) {
+    if (!shouldProbeBlockedScope('search')) return;
+    const liveRoot = findLiveSearchResultsRoot();
+    if (!liveRoot) return;
+
+    ensureSearchBanner(liveRoot.parentElement || liveRoot);
+    ensureSearchProbeStatus(liveRoot);
+
+    const apps = collectSearchResultApps(document);
+    const result = await runBlockedProbe(apps, {
+      isCancelled: () => token !== searchPageToken,
+      onProgress: (p) => {
+        if (token !== searchPageToken) return;
+        updateSearchProbeProgress(p);
+      },
+      onItemStart: (app) => {
+        if (token !== searchPageToken) return;
+        app.row?.classList.add('srbb-search-row--probing');
+      },
+      onItemDone: (app) => {
+        if (token !== searchPageToken) return;
+        app.row?.classList.remove('srbb-search-row--probing');
+      },
+      onBlocked: (app) => {
+        if (token !== searchPageToken) return;
+        if (app.row && settings.markBlockedInSearch && !app.row.querySelector('.srbb-blocked-mark')) {
+          const mark = document.createElement('span');
+          mark.className = 'srbb-blocked-mark';
+          mark.textContent = t('suggestRegionBlocked');
+          const title = app.row.querySelector(
+            '.title, .search_name, .search_title, .col.search_name'
+          );
+          if (title) title.appendChild(mark);
+          else app.row.appendChild(mark);
+          app.row.classList.add('srbb-search-row--blocked');
+        }
+      },
+    });
+
+    if (token !== searchPageToken) return;
+    decorateBlockedSearchResults();
+    finishSearchProbe(result.found);
+  }
+
   function ensureSearchBanner(mount) {
     if (!mount || document.getElementById('srbb-search-banner')) return;
     const banner = document.createElement('div');
@@ -2941,6 +3476,7 @@
       statusEl.remove();
       ensureSearchBanner(findLiveSearchResultsRoot()?.parentElement || mount.parentElement);
       decorateBlockedSearchResults();
+      void probeSearchPageBlocked(token);
     } catch (err) {
       if (token !== searchPageToken) return;
       statusEl.textContent = t('failedLoad', {
@@ -3096,6 +3632,37 @@
           <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('markBlockedInSearchHint'))}</p>
 
           <div class="srbb-panel__section srbb-panel__section--row">
+            <label class="srbb-switch">
+              <input type="checkbox" id="srbb-probe-blocked" />
+              <span class="srbb-switch__track"></span>
+              <span class="srbb-switch__label">${escapeHtml(t('probeBlockedInSearch'))}</span>
+            </label>
+          </div>
+          <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('probeBlockedInSearchHint'))}</p>
+          <p class="srbb-hint srbb-panel__section srbb-probe-note" id="srbb-probe-note" style="padding-top:0" hidden></p>
+
+          <div class="srbb-panel__section srbb-probe-fields" id="srbb-probe-fields">
+            <label class="srbb-field">
+              <span class="srbb-field__label">${escapeHtml(t('probeBlockedScope'))}</span>
+              <select id="srbb-probe-scope">
+                <option value="both">${escapeHtml(t('probeBlockedScopeBoth'))}</option>
+                <option value="suggest">${escapeHtml(t('probeBlockedScopeSuggest'))}</option>
+                <option value="search">${escapeHtml(t('probeBlockedScopeSearch'))}</option>
+              </select>
+            </label>
+            <label class="srbb-field">
+              <span class="srbb-field__label">${escapeHtml(t('probeBlockedConcurrency'))}</span>
+              <select id="srbb-probe-concurrency">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+              </select>
+            </label>
+            <p class="srbb-hint">${escapeHtml(t('probeBlockedConcurrencyHint'))}</p>
+          </div>
+
+          <div class="srbb-panel__section srbb-panel__section--row">
             <span class="srbb-blocked-count" id="srbb-blocked-count"></span>
             <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="clear-blocked">${escapeHtml(t('clearBlockedApps'))}</button>
           </div>
@@ -3192,9 +3759,22 @@
     panel.querySelector('#srbb-remember-blocked')?.addEventListener('change', () => {
       saveSettings({ rememberBlockedApps: panel.querySelector('#srbb-remember-blocked').checked });
       syncBlockedAppsPanel();
+      syncProbePanelState();
     });
     panel.querySelector('#srbb-mark-blocked-search')?.addEventListener('change', () => {
       saveSettings({ markBlockedInSearch: panel.querySelector('#srbb-mark-blocked-search').checked });
+    });
+    panel.querySelector('#srbb-probe-blocked')?.addEventListener('change', () => {
+      saveSettings({ probeBlockedInSearch: panel.querySelector('#srbb-probe-blocked').checked });
+      syncProbePanelState();
+    });
+    panel.querySelector('#srbb-probe-scope')?.addEventListener('change', () => {
+      saveSettings({ probeBlockedScope: panel.querySelector('#srbb-probe-scope').value });
+    });
+    panel.querySelector('#srbb-probe-concurrency')?.addEventListener('change', () => {
+      saveSettings({
+        probeBlockedConcurrency: panel.querySelector('#srbb-probe-concurrency').value,
+      });
     });
     panel.querySelector('[data-srbb="clear-blocked"]')?.addEventListener('click', () => {
       clearBlockedApps();
@@ -3241,6 +3821,7 @@
     syncProxyFieldsState();
     syncSearchPanelToggle();
     syncBlockedAppsPanel();
+    syncProbePanelState();
   }
 
   function syncBlockedAppsPanel() {
@@ -3274,6 +3855,9 @@
       rememberSearchTerm: !!panel.querySelector('#srbb-remember-search-term')?.checked,
       rememberBlockedApps: !!panel.querySelector('#srbb-remember-blocked')?.checked,
       markBlockedInSearch: !!panel.querySelector('#srbb-mark-blocked-search')?.checked,
+      probeBlockedInSearch: !!panel.querySelector('#srbb-probe-blocked')?.checked,
+      probeBlockedScope: panel.querySelector('#srbb-probe-scope')?.value || 'both',
+      probeBlockedConcurrency: panel.querySelector('#srbb-probe-concurrency')?.value || 3,
     });
   }
 
@@ -3634,9 +4218,13 @@
         font-size: 11px;
         line-height: 1.35;
       }
-      .srbb-proxy-fields.is-disabled {
+      .srbb-proxy-fields.is-disabled,
+      .srbb-probe-fields.is-disabled {
         opacity: .45;
         pointer-events: none;
+      }
+      .srbb-probe-note:not([hidden]) {
+        color: #e7b86a;
       }
 
       .srbb-switch {
@@ -3884,6 +4472,43 @@
       .srbb-suggest__item--blocked .srbb-suggest__img {
         box-shadow: 0 0 0 1px rgba(169,72,71,.65);
       }
+      .srbb-suggest__item--probing {
+        opacity: .92;
+      }
+      .srbb-suggest__probe-spin {
+        flex: 0 0 auto;
+        width: 12px;
+        height: 12px;
+        margin-top: 3px;
+        border: 2px solid rgba(102,192,244,.25);
+        border-top-color: #66c0f4;
+        border-radius: 50%;
+        animation: srbb-spin .7s linear infinite;
+      }
+      .srbb-suggest__probe {
+        padding: 8px 10px 10px;
+        border-top: 1px solid rgba(0,0,0,.55);
+        background: rgba(0,0,0,.22);
+      }
+      .srbb-suggest__probe[hidden] { display: none !important; }
+      .srbb-suggest__probe-track {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(15,24,34,.9);
+        border: 1px solid #000;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+      .srbb-suggest__probe-fill {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #417a9b, #66c0f4);
+        transition: width .2s ease;
+      }
+      .srbb-suggest__probe-label {
+        color: #8f98a0;
+        font-size: 11px;
+      }
       .srbb-suggest__name {
         color: #fff;
         font-weight: 600;
@@ -4019,6 +4644,57 @@
         background: #3a1f1f;
         border-color: #6b2a2a;
         color: #ffc9c9;
+      }
+
+      .srbb-search-probe {
+        margin: 0 0 12px;
+        padding: 10px 12px;
+        border: 1px solid #000;
+        border-radius: 3px;
+        background: linear-gradient(90deg, rgba(27,40,56,.95), rgba(22,48,72,.9));
+        color: #c7d5e0;
+        font: 12px/1.4 "Motiva Sans", Arial, Helvetica, sans-serif;
+      }
+      .srbb-search-probe[hidden] { display: none !important; }
+      .srbb-search-probe[data-kind="done"] {
+        background: linear-gradient(90deg, rgba(55,27,27,.55), rgba(27,40,56,.9));
+      }
+      .srbb-search-probe__row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .srbb-search-probe__spin {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(102,192,244,.25);
+        border-top-color: #66c0f4;
+        border-radius: 50%;
+        animation: srbb-spin .7s linear infinite;
+        flex: 0 0 auto;
+      }
+      .srbb-search-probe[data-kind="done"] .srbb-search-probe__spin {
+        display: none;
+      }
+      .srbb-search-probe__label { flex: 1 1 auto; }
+      .srbb-search-probe__track {
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(15,24,34,.9);
+        border: 1px solid #000;
+        overflow: hidden;
+      }
+      .srbb-search-probe__fill {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #417a9b, #66c0f4);
+        transition: width .2s ease;
+      }
+      .srbb-search-row--probing {
+        outline: 1px dashed rgba(102,192,244,.35);
+        outline-offset: -2px;
+        opacity: .85;
       }
 
       .srbb-blocked-count {
