@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.6.3
+// @version           1.6.4
 // @description       View Steam store pages blocked in your region by refetching without account cookies; optional proxy gateway
 // @description:ru    Показывает страницы магазина Steam, недоступные в регионе, повторным запросом без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 重新请求查看因区域限制不可用的 Steam 商店页面；可选代理网关

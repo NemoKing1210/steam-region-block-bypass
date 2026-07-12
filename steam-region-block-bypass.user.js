@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.6.3
+// @version           1.6.4
 // @description       View Steam store pages blocked in your region by refetching without account cookies; optional proxy gateway
 // @description:ru    Показывает страницы магазина Steam, недоступные в регионе, повторным запросом без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 重新请求查看因区域限制不可用的 Steam 商店页面；可选代理网关
@@ -1742,12 +1742,6 @@
     btn.className = 'srbb-header-btn';
     btn.title = t('btnTitle');
     btn.innerHTML = `
-      <span class="srbb-header-btn__icon" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8 1.5A6.5 6.5 0 1 0 14.5 8 6.507 6.507 0 0 0 8 1.5Zm0 11.7A5.2 5.2 0 1 1 13.2 8 5.206 5.206 0 0 1 8 13.2Z" fill="currentColor"/>
-          <path d="M8 4.2a.65.65 0 0 0-.65.65v.2a3.15 3.15 0 0 0-2.5 3.08v.12a.65.65 0 1 0 1.3 0v-.12a1.85 1.85 0 0 1 1.85-1.85h.1a.65.65 0 0 0 0-1.3H8Zm2.55 4.35a.65.65 0 0 0-.65.65v.55a.9.9 0 1 1-1.8 0 .65.65 0 1 0-1.3 0 2.2 2.2 0 1 0 3.75-1.55v-.65a.65.65 0 0 0-.65-.65h.65Z" fill="currentColor"/>
-        </svg>
-      </span>
       <span class="srbb-header-btn__text">${escapeHtml(t('btnText'))}</span>
       <span class="srbb-header-btn__dot" id="srbb-proxy-dot"></span>
     `;
@@ -2125,11 +2119,6 @@
       #srbb-settings-btn.srbb-header-btn.is-open,
       #srbb-settings-btn.srbb-header-btn.is-proxy-on {
         background: linear-gradient(to bottom, #a4d007 5%, #536904 95%);
-      }
-      .srbb-header-btn__icon {
-        display: inline-flex;
-        width: 14px;
-        height: 14px;
       }
       .srbb-header-btn__dot {
         width: 7px;
