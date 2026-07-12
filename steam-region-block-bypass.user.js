@@ -10,7 +10,7 @@
 // @name:ko           Steam Region Block Bypass — 지역 제한 우회
 // @name:pl           Steam Region Block Bypass — obejście blokady regionu
 // @namespace         https://github.com/NemoKing1210/steam-region-block-bypass
-// @version           1.4.0
+// @version           1.5.2
 // @description       View Steam store pages blocked in your region by refetching without account cookies; optional proxy gateway
 // @description:ru    Показывает страницы магазина Steam, недоступные в регионе, повторным запросом без cookies аккаунта; опциональный proxy gateway
 // @description:zh-CN 通过无账号 Cookie 重新请求查看因区域限制不可用的 Steam 商店页面；可选代理网关
@@ -869,7 +869,7 @@
         return;
       }
 
-      injectDirect(remoteGame, doc, targetUrl);
+      await injectDirect(remoteGame, doc, targetUrl);
       hideLoaderOverlay();
     } catch (err) {
       showStatus(
@@ -1124,7 +1124,220 @@
     return `${cssV6Base}${fileName}`;
   }
 
-  function injectDirect(remoteGame, remoteDoc, sourceUrl) {
+  function isExecutableScriptTag(script) {
+    const type = (script.getAttribute('type') || 'text/javascript').trim().toLowerCase();
+    if (!type || type === 'text/javascript' || type === 'application/javascript' || type === 'text/jscript') {
+      return true;
+    }
+    return false;
+  }
+
+  function isBlockedScriptSrc(src) {
+    return /^(chrome-extension|moz-extension|blob):/i.test(src || '') || /alikeguardian|steamdb\.info\/ext/i.test(src || '');
+  }
+
+  function isBlockedScriptCode(code) {
+    return /alikeguardian|ag_changes|chrome-extension:\/\//i.test(code || '');
+  }
+
+  function scriptKey(href) {
+    try {
+      const u = new URL(href, location.href);
+      const parts = u.pathname.split('/').filter(Boolean);
+      return (parts.slice(-3).join('/') || u.href).toLowerCase();
+    } catch {
+      return String(href || '').toLowerCase();
+    }
+  }
+
+  function loadExternalScript(href) {
+    return new Promise((resolve) => {
+      const el = document.createElement('script');
+      el.src = href;
+      el.async = false;
+      el.dataset.srbbScript = '1';
+      el.onload = () => resolve();
+      el.onerror = () => {
+        console.warn('[SRBB] failed to load script', href);
+        resolve();
+      };
+      (document.head || document.documentElement).appendChild(el);
+    });
+  }
+
+  function runInlineScript(code) {
+    const el = document.createElement('script');
+    el.dataset.srbbScript = '1';
+    el.textContent = code;
+    (document.body || document.documentElement).appendChild(el);
+  }
+
+  function waitForPaint() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+  }
+
+  /**
+   * Newly injected app CSS must be applied before Steam widgets measure layout.
+   * AdjustVisibleAppTags hides every .app_tag when the container width is still 0.
+   */
+  async function waitForSrbbStylesheets() {
+    const links = [...document.querySelectorAll('link[data-srbb-style="1"]')];
+    await Promise.all(
+      links.map(
+        (link) =>
+          new Promise((resolve) => {
+            if (link.sheet) {
+              resolve();
+              return;
+            }
+            const done = () => resolve();
+            link.addEventListener('load', done, { once: true });
+            link.addEventListener('error', done, { once: true });
+            // Sheet may appear between the check and the listeners
+            if (link.sheet) done();
+          })
+      )
+    );
+    await waitForPaint();
+  }
+
+  /**
+   * Re-run Steam tag fitting (and a visible fallback) after layout settles.
+   * Tags ship as display:none; InitAppTagModal → AdjustVisibleAppTags reveals them by width.
+   */
+  function fixupSteamWidgets() {
+    runInlineScript(`
+(function () {
+  if (typeof $J === 'undefined') return;
+
+  function fitTags() {
+    if (typeof AdjustVisibleAppTags === 'function') {
+      $J('.glance_tags.popular_tags, .popular_tags[data-appid], .your_tags[data-appid]').each(function () {
+        AdjustVisibleAppTags($J(this));
+      });
+    }
+    $J(window).trigger('resize');
+
+    $J('.glance_tags.popular_tags').each(function () {
+      var $tags = $J(this).children('.app_tag:not(.add_button)');
+      if ($tags.length && $tags.filter(':visible').length === 0) {
+        $tags.show();
+      }
+    });
+  }
+
+  fitTags();
+  setTimeout(fitTags, 100);
+  setTimeout(fitTags, 400);
+})();
+`);
+  }
+
+  /** Host store session (header), not the anonymous guest HTML we inject. */
+  function isHostLoggedIn() {
+    if (
+      document.querySelector(
+        '#account_pulldown, #account_dropdown, #header_notification_area, #global_actions .user_avatar, #global_actions .playerAvatar'
+      )
+    ) {
+      return true;
+    }
+    if (document.querySelector('#global_actions a[href*="steamcommunity.com/profiles/"], #global_actions a[href*="steamcommunity.com/id/"]')) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Guest app HTML always includes “Sign in to add this item…”.
+   * Remove that prompt when the browser session is already logged into Steam.
+   */
+  function stripGuestQueueSignInPrompt(root) {
+    if (!isHostLoggedIn()) return;
+    const actions = root.querySelector('#queueActionsCtn') || root.querySelector('.queue_actions_ctn');
+    if (!actions) return;
+    actions.querySelectorAll(':scope > p').forEach((p) => {
+      if (p.querySelector('a[href*="/login"]')) p.remove();
+    });
+  }
+
+  /**
+   * Error / Oops shells omit app libs (game.js, gamehighlightplayer.js, …).
+   * Load any Steam CDN scripts from the guest document that are not already present.
+   * Skips the React store application bundles — those are already booted on the host page.
+   */
+  async function ensureAppPageScripts(remoteDoc) {
+    const existing = new Set(
+      [...document.querySelectorAll('script[src]')].map((s) => scriptKey(s.src)).filter(Boolean)
+    );
+    const toLoad = [];
+
+    remoteDoc.querySelectorAll('script[src]').forEach((script) => {
+      if (!isExecutableScriptTag(script)) return;
+      const raw = script.getAttribute('src');
+      if (!raw || isBlockedScriptSrc(raw)) return;
+
+      let href;
+      try {
+        href = new URL(raw, 'https://store.steampowered.com/').href;
+      } catch {
+        return;
+      }
+
+      if (!/steamstatic\.com|steampowered\.com/i.test(href)) return;
+      if (/\/javascript\/applications\//i.test(href)) return;
+
+      const key = scriptKey(href);
+      if (!key || existing.has(key)) return;
+      existing.add(key);
+      toLoad.push(href);
+    });
+
+    for (const href of toLoad) {
+      await loadExternalScript(href);
+    }
+    return toLoad.length;
+  }
+
+  /**
+   * Page-level bootstraps (GStoreItemData, …) sit in <head>/early <body>, outside
+   * .game_page_background. Widget inits live inside the extracted game tree.
+   * importNode copies <script> nodes but does not execute them — re-create + append.
+   */
+  function collectGuestInlineScripts(remoteDoc, wrapper) {
+    const codes = [];
+    const seen = new Set();
+
+    const push = (code) => {
+      const trimmed = (code || '').trim();
+      if (!trimmed || seen.has(trimmed) || isBlockedScriptCode(trimmed)) return;
+      seen.add(trimmed);
+      codes.push(trimmed);
+    };
+
+    remoteDoc.querySelectorAll('script:not([src])').forEach((script) => {
+      if (!isExecutableScriptTag(script)) return;
+      const code = script.textContent || '';
+      if (
+        /GStoreItemData|g_bUseOldReviewDisplay|g_rgAppKeywords|g_rgAppData/i.test(code) &&
+        !/home_tab_section|InitTopSellersControls|g_rgDelayedLoadImages/i.test(code)
+      ) {
+        push(code);
+      }
+    });
+
+    wrapper.querySelectorAll('script').forEach((script) => {
+      if (!isExecutableScriptTag(script)) return;
+      if (script.getAttribute('src')) return;
+      push(script.textContent || '');
+    });
+
+    return codes;
+  }
+
+  async function injectDirect(remoteGame, remoteDoc, sourceUrl) {
     const template = getContentMount();
     clearErrorPageContent(template);
     applyAppBodyClasses();
@@ -1155,9 +1368,12 @@
       wrapper.appendChild(bg);
     }
 
-    // Drop extension junk / scripts that break outside full page boot
+    const inlineScripts = collectGuestInlineScripts(remoteDoc, wrapper);
+
+    // Drop inert copied scripts + extension junk; Steam JS is re-run below
     wrapper.querySelectorAll('script, .alike_sub, #ag_changes_button, .ag_changes').forEach((el) => el.remove());
     absolutizeUrls(wrapper);
+    stripGuestQueueSignInPrompt(wrapper);
     insertBannerIntoTabletGrid(wrapper, createBanner());
 
     shell.appendChild(wrapper);
@@ -1168,6 +1384,18 @@
     else if (getAppIdFromUrl(sourceUrl)) {
       /* keep existing title */
     }
+
+    await waitForSrbbStylesheets();
+    await ensureAppPageScripts(remoteDoc);
+    await waitForPaint();
+    for (const code of inlineScripts) {
+      try {
+        runInlineScript(code);
+      } catch (err) {
+        console.warn('[SRBB] injected script error', err);
+      }
+    }
+    fixupSteamWidgets();
   }
 
   function insertBannerIntoTabletGrid(root, banner) {

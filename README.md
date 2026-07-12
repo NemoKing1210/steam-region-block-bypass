@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.0-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.2-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores the product page when Steam shows **“This item is currently unavailable in your region”**.
 
@@ -54,7 +54,7 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 
 ## Features
 
-- **Direct DOM inject** — clears the Oops / region-error shell and inserts the real Steam game layout (`.game_page_background` / `#tabletGrid`)
+- **Direct DOM inject** — clears the Oops / region-error shell and inserts the real Steam game layout (`.game_page_background` / `#tabletGrid`), including app CSS/JS so store widgets keep working
 - **Auto-bypass or button** — run immediately on blocked pages, or show a manual offer first
 - **Anonymous request** — uses `GM_xmlhttpRequest` with `anonymous: true` (no login cookies)
 - **Store language** — guest fetch uses `Steam_Language`, `?l=`, and `Accept-Language` so the page matches your Steam UI language
@@ -97,7 +97,7 @@ Steam app page loads
                 │
                 ├── still blocked? ──► show error + suggest proxy
                 │
-                └── clear Oops shell → inject game layout + stylesheets + banner
+                └── clear Oops shell → inject layout + CSS + Steam JS + banner
 ```
 
 ### Anonymous fetch

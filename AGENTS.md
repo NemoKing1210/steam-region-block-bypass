@@ -31,7 +31,7 @@ IIFE, `'use strict'`, no modules. Key flows:
 2. `buildTargetUrl()` — strip `snr`, set `?l=` from `getSteamStoreLanguage()`, optional `?cc=`.
 3. Optional proxy rewrite via `buildRequestUrl()`.
 4. Anonymous `GM_xmlhttpRequest` with age-gate + `Steam_Language` cookies (`buildRequestHeaders()`).
-5. Parse HTML → `extractGamePageRoot()` → `injectDirect()` (clear Oops shell, load missing app CSS, banner).
+5. Parse HTML → `extractGamePageRoot()` → `injectDirect()` (clear Oops shell, load missing app CSS/JS, re-run guest inline scripts, banner).
 
 Settings key: `srbb_settings` (`GM_getValue` / `GM_setValue`). Defaults in `DEFAULT_SETTINGS`.
 
@@ -73,5 +73,5 @@ Metadata block in `.user.js` and `.meta.js` must stay identical except that `.me
 - Commit secrets, proxy credentials, or local `@updateURL` / `@downloadURL` overrides.
 - Add `@connect` hosts casually without need; `*` already covers custom gateways.
 - Nest injected content inside the Steam Oops / `#error_box` shell.
-- Execute remote `<script>` tags from the guest HTML in the host page.
+- Execute non-Steam / extension scripts from guest HTML (AlikeGuardian, chrome-extension, etc.). Steam CDN libs + guest inline inits are re-run on purpose via `ensureAppPageScripts` / `collectGuestInlineScripts`.
 - Force-push `main` or amend published commits unless the user explicitly asks.

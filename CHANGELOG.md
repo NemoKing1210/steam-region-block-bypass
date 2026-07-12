@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-07-12
+
+### Fixed
+
+- When the host page is already signed into Steam, drop the guest “Sign in to add this item…” prompt from `#queueActionsCtn` (anonymous HTML still shows it)
+
+## [1.5.1] - 2026-07-12
+
+### Fixed
+
+- Popular tags stay visible after inject: wait for app CSS/layout before running Steam inits, then re-run `AdjustVisibleAppTags` (tags ship as `display:none` and were left hidden when the glance row still had width 0)
+
+## [1.5.0] - 2026-07-12
+
+### Added
+
+- Direct inject reloads missing Steam app libraries (`game.js`, `gamehighlightplayer.js`, …) and re-runs guest page inline scripts so carousels, tabs, and other store widgets work
+
+### Changed
+
+- Extension junk scripts are still stripped; only Steam store scripts from the guest HTML are executed in page context
+
 ## [1.4.0] - 2026-07-12
 
 ### Added
@@ -52,6 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-bypass on blocked pages and Violentmonkey menu command for settings
 - Optional local HTTP gateway (`proxy-gateway.mjs`) for upstream HTTP/SOCKS proxies
 
+[1.5.1]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.5.1
+[1.5.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.5.0
 [1.4.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.4.0
 [1.1.1]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.1.1
 [1.1.0]: https://github.com/NemoKing1210/steam-region-block-bypass/releases/tag/v1.1.0
