@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version source of truth is `package.json`; userscript metadata is declared in `vite.config.js`
 - Added CI artifact verification, `DEVELOPMENT.md`, and `CONTRIBUTING.md` (same workflow as x-translator)
 - Settings trigger moved into the Steam account dropdown (`#account_dropdown`), matching SteamDB-style menu items; compact `#global_actions` button remains as a logged-out fallback
-- Settings panel opens as a centered modal with a dimmed backdrop
+- Settings panel opens as a centered modal with a dimmed backdrop (wider layout, body scroll locked while open, script version shown in the header)
+- Added an **About** settings tab with script description, author, license, and links to GitHub / Issues (footer repo blurb removed)
 
 ## [1.16.10] - 2026-07-13
 

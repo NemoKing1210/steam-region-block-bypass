@@ -2,7 +2,12 @@ import pkg from '../package.json' with { type: 'json' };
 
 export const REPO_URL =
   'https://github.com/NemoKing1210/steam-region-block-bypass';
+export const AUTHOR_URL = 'https://github.com/NemoKing1210';
+export const ISSUES_URL =
+  'https://github.com/NemoKing1210/steam-region-block-bypass/issues';
+export const SCRIPT_AUTHOR = pkg.author;
 export const SCRIPT_VERSION = pkg.version;
+export const SCRIPT_LICENSE = pkg.license;
 export const STORAGE_KEY = 'srbb_settings';
 export const CACHE_STORAGE_KEY = 'srbb_page_cache';
 export const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';

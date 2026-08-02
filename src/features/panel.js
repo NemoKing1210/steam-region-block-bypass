@@ -1,6 +1,11 @@
 import {
   REPO_URL,
+  AUTHOR_URL,
+  ISSUES_URL,
   CACHE_MINUTES_MAX,
+  SCRIPT_VERSION,
+  SCRIPT_AUTHOR,
+  SCRIPT_LICENSE,
 } from '../constants.js';
 import { state } from '../state.js';
 import { t } from '../i18n/index.js';
@@ -139,7 +144,10 @@ export function ensurePanel() {
   panel.innerHTML = `
     <div class="srbb-panel__header">
       <div>
-        <div class="srbb-panel__title">${escapeHtml(t('panelTitle'))}</div>
+        <div class="srbb-panel__title-row">
+          <div class="srbb-panel__title">${escapeHtml(t('panelTitle'))}</div>
+          <span class="srbb-panel__version">v${escapeHtml(SCRIPT_VERSION)}</span>
+        </div>
         <div class="srbb-panel__subtitle">${escapeHtml(t('panelSubtitle'))}</div>
       </div>
       <button type="button" class="srbb-panel__close" data-srbb="close" aria-label="${escapeHtml(t('close'))}">×</button>
@@ -149,6 +157,7 @@ export function ensurePanel() {
       <button type="button" class="srbb-panel__tab is-active" role="tab" data-srbb-tab="general" aria-selected="true">${escapeHtml(t('tabGeneral'))}</button>
       <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="search" aria-selected="false">${escapeHtml(t('tabSearch'))}</button>
       <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="proxy" aria-selected="false">${escapeHtml(t('tabProxy'))}</button>
+      <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="about" aria-selected="false">${escapeHtml(t('tabAbout'))}</button>
     </div>
 
     <div class="srbb-panel__body">
@@ -303,6 +312,36 @@ export function ensurePanel() {
           </p>
         </div>
       </div>
+
+      <div class="srbb-panel__tabpane" data-srbb-pane="about" role="tabpanel" hidden>
+        <div class="srbb-about">
+          <div class="srbb-about__hero">
+            <div class="srbb-about__name">${escapeHtml(t('panelTitle'))}</div>
+            <span class="srbb-panel__version">v${escapeHtml(SCRIPT_VERSION)}</span>
+          </div>
+          <p class="srbb-about__blurb">${escapeHtml(t('aboutBlurb'))}</p>
+
+          <dl class="srbb-about__meta">
+            <div class="srbb-about__row">
+              <dt>${escapeHtml(t('aboutAuthor'))}</dt>
+              <dd>
+                <a class="srbb-about__link" href="${AUTHOR_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(SCRIPT_AUTHOR)}</a>
+              </dd>
+            </div>
+            <div class="srbb-about__row">
+              <dt>${escapeHtml(t('aboutLicense'))}</dt>
+              <dd>${escapeHtml(SCRIPT_LICENSE)}</dd>
+            </div>
+          </dl>
+
+          <p class="srbb-about__disclaimer">${escapeHtml(t('aboutDisclaimer'))}</p>
+
+          <div class="srbb-about__actions">
+            <a class="srbb-btn srbb-btn--ghost" href="${REPO_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('aboutSource'))}</a>
+            <a class="srbb-btn srbb-btn--ghost" href="${ISSUES_URL}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('aboutIssues'))}</a>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="srbb-panel__footer">
@@ -311,11 +350,6 @@ export function ensurePanel() {
         <button type="button" class="srbb-btn" data-srbb="save">${escapeHtml(t('save'))}</button>
         <button type="button" class="srbb-btn srbb-btn--green" data-srbb="save-run" id="srbb-save-run">${escapeHtml(t('saveReload'))}</button>
       </div>
-      <div class="srbb-panel__footer-divider" role="separator"></div>
-      <a class="srbb-panel__repo" href="${REPO_URL}" target="_blank" rel="noopener noreferrer">
-        <span class="srbb-panel__repo-title">${escapeHtml(t('repoLink'))}</span>
-        <span class="srbb-panel__repo-desc">${escapeHtml(t('repoAbout'))}</span>
-      </a>
     </div>
   `;
   overlay.appendChild(panel);
@@ -525,10 +559,57 @@ export function togglePanel(force) {
 
   state.panelOpen = typeof force === 'boolean' ? force : !state.panelOpen;
   overlay.hidden = !state.panelOpen;
+  setBodyScrollLocked(state.panelOpen);
 
   if (state.panelOpen) {
     fillPanelForm();
   }
+}
+
+/** @type {{ y: number, pad: string } | null} */
+let scrollLockState = null;
+
+function isEventInsidePanelScroller(target) {
+  const panelBody = document.querySelector('#srbb-panel .srbb-panel__body');
+  return !!(panelBody && target instanceof Node && panelBody.contains(target));
+}
+
+function onModalScrollGuard(e) {
+  if (!state.panelOpen) return;
+  if (isEventInsidePanelScroller(e.target)) return;
+  e.preventDefault();
+}
+
+function setBodyScrollLocked(locked) {
+  const root = document.documentElement;
+  const body = document.body;
+
+  if (locked) {
+    if (scrollLockState) return;
+    const y = window.scrollY || root.scrollTop || body.scrollTop || 0;
+    const pad = Math.max(0, window.innerWidth - root.clientWidth);
+    scrollLockState = { y, pad: body.style.paddingRight };
+    root.classList.add('srbb-modal-open');
+    body.style.paddingRight = pad ? `${pad}px` : scrollLockState.pad;
+    body.style.top = `-${y}px`;
+    document.addEventListener('wheel', onModalScrollGuard, { passive: false, capture: true });
+    document.addEventListener('touchmove', onModalScrollGuard, { passive: false, capture: true });
+    return;
+  }
+
+  if (!scrollLockState) {
+    root.classList.remove('srbb-modal-open');
+    return;
+  }
+
+  const { y, pad } = scrollLockState;
+  scrollLockState = null;
+  document.removeEventListener('wheel', onModalScrollGuard, { capture: true });
+  document.removeEventListener('touchmove', onModalScrollGuard, { capture: true });
+  root.classList.remove('srbb-modal-open');
+  body.style.top = '';
+  body.style.paddingRight = pad;
+  window.scrollTo(0, y);
 }
 
 export function waitForElement(selector, timeout = 15000) {
