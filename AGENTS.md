@@ -69,7 +69,7 @@ steam-region-block-bypass/
 
 Settings key: `srbb_settings`. Page cache: `srbb_page_cache`. Blocked apps: `srbb_blocked_apps`.
 
-UI: Steam-styled button in `#global_actions`, panel `#srbb-panel`. Prefix classes/ids with `srbb-`.
+UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback in `#global_actions`), centered modal panel `#srbb-panel` over `#srbb-panel-overlay`. Prefix classes/ids with `srbb-`.
 
 ## Conventions
 

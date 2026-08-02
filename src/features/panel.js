@@ -22,17 +22,72 @@ import { buildAppHref } from './suggest.js';
 
 export function observeHeader() {
   const observer = new MutationObserver(() => {
-    if (!document.getElementById('srbb-settings-btn')) {
+    const existing = document.getElementById('srbb-settings-btn');
+    const menu = getAccountMenuBody();
+    // Upgrade header fallback → account menu once dropdown appears (logged-in)
+    if (existing?.classList.contains('srbb-header-btn') && menu) {
+      existing.remove();
+      ensureSettingsButton();
+      return;
+    }
+    if (!existing) {
       ensureSettingsButton();
     }
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
-export async function ensureSettingsButton() {
-  const host = await waitForElement('#global_actions', 20000);
+function getAccountMenuBody() {
+  return document.querySelector('#account_dropdown .popup_body.popup_menu');
+}
+
+function hideAccountDropdown() {
+  if (typeof window.HideMenu === 'function') {
+    try {
+      window.HideMenu('account_pulldown', 'account_dropdown');
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  const dropdown = document.getElementById('account_dropdown');
+  if (dropdown) {
+    dropdown.style.display = 'none';
+    dropdown.style.visibility = 'hidden';
+  }
+}
+
+function onSettingsTriggerClick(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  hideAccountDropdown();
+  togglePanel();
+}
+
+function injectAccountMenuItem(menu) {
+  if (document.getElementById('srbb-settings-btn')) {
+    return document.getElementById('srbb-settings-btn');
+  }
+
+  const item = document.createElement('a');
+  item.id = 'srbb-settings-btn';
+  item.className = 'popup_menu_item srbb-menu-item';
+  item.href = '#';
+  item.title = t('btnTitle');
+  item.textContent = t('accountMenuItem');
+  item.addEventListener('click', onSettingsTriggerClick);
+
+  // After SteamDB / similar extension links when present; else at end of menu
+  const steamDb = menu.querySelector('.steamdb_options_link');
+  if (steamDb) menu.insertBefore(item, steamDb.nextSibling);
+  else menu.appendChild(item);
+
+  ensurePanel();
+  return item;
+}
+
+function injectHeaderFallback(host) {
   if (!host || document.getElementById('srbb-settings-btn')) {
-    updateButtonState();
     return document.getElementById('srbb-settings-btn');
   }
 
@@ -41,45 +96,46 @@ export async function ensureSettingsButton() {
   btn.id = 'srbb-settings-btn';
   btn.className = 'srbb-header-btn';
   btn.title = t('btnTitle');
-  btn.innerHTML = `
-    <span class="srbb-header-btn__text">${escapeHtml(t('btnText'))}</span>
-    <span class="srbb-header-btn__dot" id="srbb-proxy-dot"></span>
-  `;
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    togglePanel();
-  });
+  btn.textContent = t('btnText');
+  btn.addEventListener('click', onSettingsTriggerClick);
 
-  // Prefer placing before SIH / account controls: first child of #global_actions
   const sihBtn = host.querySelector('.sih-features-button');
   if (sihBtn) host.insertBefore(btn, sihBtn);
   else host.insertBefore(btn, host.firstChild);
 
   ensurePanel();
-  updateButtonState();
   return btn;
 }
 
-export function updateButtonState() {
-  const dot = document.getElementById('srbb-proxy-dot');
-  const btn = document.getElementById('srbb-settings-btn');
-  if (dot) {
-    dot.classList.toggle('is-on', !!state.settings.proxyEnabled);
-    dot.title = state.settings.proxyEnabled ? t('proxyOn') : t('proxyOff');
+export async function ensureSettingsButton() {
+  await waitForElement('#global_actions', 20000);
+
+  if (document.getElementById('srbb-settings-btn')) {
+    return document.getElementById('srbb-settings-btn');
   }
-  if (btn) {
-    btn.classList.toggle('is-proxy-on', !!state.settings.proxyEnabled);
-  }
+
+  const menu = getAccountMenuBody();
+  if (menu) return injectAccountMenuItem(menu);
+
+  // Logged-out store header has no account dropdown — keep a compact header control
+  return injectHeaderFallback(document.querySelector('#global_actions'));
 }
 
 export function ensurePanel() {
-  if (document.getElementById('srbb-panel')) return;
+  if (document.getElementById('srbb-panel-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'srbb-panel-overlay';
+  overlay.className = 'srbb-panel-overlay';
+  overlay.hidden = true;
+  overlay.setAttribute('role', 'presentation');
 
   const panel = document.createElement('div');
   panel.id = 'srbb-panel';
   panel.className = 'srbb-panel';
-  panel.hidden = true;
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', t('panelTitle'));
   panel.innerHTML = `
     <div class="srbb-panel__header">
       <div>
@@ -262,9 +318,12 @@ export function ensurePanel() {
       </a>
     </div>
   `;
-  document.body.appendChild(panel);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
 
-  panel.addEventListener('click', (e) => e.stopPropagation());
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) togglePanel(false);
+  });
   panel.querySelectorAll('[data-srbb-tab]').forEach((tab) => {
     tab.addEventListener('click', () => switchPanelTab(tab.getAttribute('data-srbb-tab')));
   });
@@ -324,15 +383,6 @@ export function ensurePanel() {
     toggleBlockedAppsList();
   });
 
-  document.addEventListener('click', (e) => {
-    if (!state.panelOpen) return;
-    const btn = document.getElementById('srbb-settings-btn');
-    if (panel.contains(e.target) || btn?.contains(e.target)) return;
-    if (e.target.closest?.('[data-srbb="search-settings"], [data-srbb="suggest-settings"], [data-srbb="open-settings"]')) {
-      return;
-    }
-    togglePanel(false);
-  });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.panelOpen) togglePanel(false);
   });
@@ -470,35 +520,15 @@ export function syncProxyFieldsState() {
 
 export function togglePanel(force) {
   ensurePanel();
-  const panel = document.getElementById('srbb-panel');
-  const btn = document.getElementById('srbb-settings-btn');
-  if (!panel) return;
+  const overlay = document.getElementById('srbb-panel-overlay');
+  if (!overlay) return;
 
   state.panelOpen = typeof force === 'boolean' ? force : !state.panelOpen;
-  panel.hidden = !state.panelOpen;
-  btn?.classList.toggle('is-open', state.panelOpen);
+  overlay.hidden = !state.panelOpen;
 
   if (state.panelOpen) {
     fillPanelForm();
-    positionPanel();
   }
-}
-
-export function positionPanel() {
-  const panel = document.getElementById('srbb-panel');
-  const btn = document.getElementById('srbb-settings-btn');
-  if (!panel || !btn) return;
-
-  const rect = btn.getBoundingClientRect();
-  const width = 380;
-  let left = rect.right - width;
-  if (left < 8) left = 8;
-  if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
-
-  const top = Math.round(rect.bottom + 8);
-  panel.style.top = `${top}px`;
-  panel.style.left = `${Math.round(left)}px`;
-  panel.style.maxHeight = `${Math.max(240, window.innerHeight - top - 8)}px`;
 }
 
 export function waitForElement(selector, timeout = 15000) {

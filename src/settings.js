@@ -7,7 +7,7 @@ import {
   PROBE_CONCURRENCY_MAX,
 } from './constants.js';
 import { state, setSettings } from './state.js';
-import { updateButtonState, syncSearchPanelToggle } from './features/panel.js';
+import { syncSearchPanelToggle } from './features/panel.js';
 import { syncSearchGuestMode } from './features/suggest.js';
 import { isSearchPage, scheduleGuestSearchReload } from './features/search-page.js';
 
@@ -42,7 +42,6 @@ export function saveSettings(next) {
   state.settings.probeBlockedConcurrency = normalizeProbeConcurrency(state.settings.probeBlockedConcurrency);
   GM_setValue(STORAGE_KEY, state.settings);
   setSettings(state.settings);
-  updateButtonState();
   const searchChanged =
     ('searchUnblocked' in next && prevSearch !== state.settings.searchUnblocked) ||
     ('searchPageUnblocked' in next && prevSearchPage !== state.settings.searchPageUnblocked);

@@ -6,7 +6,7 @@
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header, plus an opt-in guest `/search` page, without account cookies.
 
-It refetches app URLs **without account cookies** (guest view) and injects the real store layout. **Guest search suggestions** are on by default; the full **`/search` page** guest mode is off by default (enable in Region Bypass → Search). For IP-based locks, an optional **proxy gateway** can be configured from a Steam-styled settings panel in the header.
+It refetches app URLs **without account cookies** (guest view) and injects the real store layout. **Guest search suggestions** are on by default; the full **`/search` page** guest mode is off by default (enable in Region Bypass → Search). For IP-based locks, an optional **proxy gateway** can be configured from the Steam-styled settings panel (account menu → Region Bypass settings).
 
 Compatible with [Tampermonkey](https://www.tampermonkey.net/), [Violentmonkey](https://violentmonkey.github.io/), [Greasemonkey](https://www.greasespot.net/), ScriptCat, and other managers that support the `// ==UserScript==` metadata block.
 
@@ -62,7 +62,7 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 - **Age-gate cookies** — sends `birthtime` / mature-content cookies so guest pages are less likely to stop at the age check
 - **Optional store country (`cc`)** — override Steam store country for the guest request
 - **Proxy gateway panel** — enable/disable, host, port, username, password, URL mode
-- **Steam-like UI** — **Region Bypass** button in `#global_actions`, dark Steam-styled settings popup
+- **Steam-like UI** — settings entry in the account dropdown (`#account_dropdown`, SteamDB-style); logged-out fallback button in `#global_actions`; centered modal settings panel with dimmed backdrop
 - **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl
 - **Manual controls** — reload injected content, open settings from the banner or userscript manager menu
 - **Guest search suggestions** — on by default: anonymous suggest dropdown via the same guest fetch stack (proxy / `cc` / cache); disable in **Region Bypass → Search**

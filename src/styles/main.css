@@ -1,7 +1,13 @@
+/* Account dropdown entry (logged-in) — Steam popup_menu_item chrome */
+#srbb-settings-btn.srbb-menu-item {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Logged-out fallback in #global_actions */
 #srbb-settings-btn.srbb-header-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   margin-right: 8px;
   height: 24px;
   padding: 0 10px;
@@ -19,38 +25,34 @@
 #srbb-settings-btn.srbb-header-btn:hover {
   background: linear-gradient(to bottom, #7dcaFA 5%, #4d8bb0 95%);
 }
-#srbb-settings-btn.srbb-header-btn.is-open,
-#srbb-settings-btn.srbb-header-btn.is-proxy-on {
-  background: linear-gradient(to bottom, #a4d007 5%, #536904 95%);
+
+.srbb-panel-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.72);
 }
-.srbb-header-btn__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.35);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
-}
-.srbb-header-btn__dot.is-on {
-  background: #beee11;
-  box-shadow: 0 0 6px rgba(190,238,17,.8);
+.srbb-panel-overlay[hidden] {
+  display: none !important;
 }
 
 .srbb-panel {
-  position: fixed;
-  z-index: 999999;
+  position: relative;
   display: flex;
   flex-direction: column;
-  width: 380px;
-  max-height: calc(100vh - 72px);
+  width: min(400px, 100%);
+  max-height: min(90vh, 760px);
   background: linear-gradient(180deg, #1b2838 0%, #16202d 100%);
   border: 1px solid #000;
-  box-shadow: 0 0 12px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.04);
+  box-shadow: 0 16px 48px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.04);
   color: #c7d5e0;
   font: 12px/1.4 "Motiva Sans", Arial, Helvetica, sans-serif;
   border-radius: 3px;
-}
-.srbb-panel[hidden] {
-  display: none !important;
 }
 .srbb-panel__header {
   display: flex;
@@ -1082,5 +1084,7 @@ a.srbb-search-row--blocked.search_result_row:hover {
 }
 
 @media (max-width: 900px) {
-  .srbb-header-btn__text { display: none; }
+  #srbb-settings-btn.srbb-header-btn {
+    padding: 0 8px;
+  }
 }

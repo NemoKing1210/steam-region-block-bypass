@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Modular Vite + vite-plugin-monkey build: source lives under `src/`; root `.user.js` / `.meta.js` are build artifacts (`npm run build`)
 - Version source of truth is `package.json`; userscript metadata is declared in `vite.config.js`
 - Added CI artifact verification, `DEVELOPMENT.md`, and `CONTRIBUTING.md` (same workflow as x-translator)
+- Settings trigger moved into the Steam account dropdown (`#account_dropdown`), matching SteamDB-style menu items; compact `#global_actions` button remains as a logged-out fallback
+- Settings panel opens as a centered modal with a dimmed backdrop
 
 ## [1.16.10] - 2026-07-13
 
