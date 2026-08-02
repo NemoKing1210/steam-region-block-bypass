@@ -1,8 +1,9 @@
 node_modules/
-package-lock.json
-npm-debug.log*
+dist/
+*.local
 .DS_Store
 Thumbs.db
 *.log
 .env
 .env.*
+npm-debug.log*

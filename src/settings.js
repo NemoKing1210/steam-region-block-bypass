@@ -1,0 +1,78 @@
+import { GM_getValue, GM_setValue } from '$';
+import {
+  STORAGE_KEY,
+  SEARCH_DEFAULT_ON_FLAG,
+  DEFAULT_SETTINGS,
+  CACHE_MINUTES_MAX,
+  PROBE_CONCURRENCY_MAX,
+} from './constants.js';
+import { state, setSettings } from './state.js';
+import { updateButtonState, syncSearchPanelToggle } from './features/panel.js';
+import { syncSearchGuestMode } from './features/suggest.js';
+import { isSearchPage, scheduleGuestSearchReload } from './features/search-page.js';
+
+export function loadSettings() {
+  let raw = GM_getValue(STORAGE_KEY, null);
+  raw = migrateSearchDefaultOn(raw);
+  if (!raw || typeof raw !== 'object') return { ...DEFAULT_SETTINGS };
+  const merged = { ...DEFAULT_SETTINGS, ...raw };
+  delete merged.rememberSearchTerm;
+  merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
+  merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
+  merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
+  return merged;
+}
+
+export function migrateSearchDefaultOn(raw) {
+  if (GM_getValue(SEARCH_DEFAULT_ON_FLAG, false)) return raw;
+  GM_setValue(SEARCH_DEFAULT_ON_FLAG, true);
+  if (!raw || typeof raw !== 'object') return raw;
+  if (raw.searchUnblocked === true) return raw;
+  const next = { ...raw, searchUnblocked: true };
+  GM_setValue(STORAGE_KEY, next);
+  return next;
+}
+
+export function saveSettings(next) {
+  const prevSearch = state.settings.searchUnblocked;
+  const prevSearchPage = state.settings.searchPageUnblocked;
+  state.settings = { ...state.settings, ...next };
+  state.settings.cacheMinutes = normalizeCacheMinutes(state.settings.cacheMinutes);
+  state.settings.probeBlockedScope = normalizeProbeScope(state.settings.probeBlockedScope);
+  state.settings.probeBlockedConcurrency = normalizeProbeConcurrency(state.settings.probeBlockedConcurrency);
+  GM_setValue(STORAGE_KEY, state.settings);
+  setSettings(state.settings);
+  updateButtonState();
+  const searchChanged =
+    ('searchUnblocked' in next && prevSearch !== state.settings.searchUnblocked) ||
+    ('searchPageUnblocked' in next && prevSearchPage !== state.settings.searchPageUnblocked);
+  if (searchChanged) {
+    syncSearchGuestMode();
+    syncSearchPanelToggle();
+    if (state.settings.searchPageUnblocked && isSearchPage()) {
+      state.searchPageLoadedHref = '';
+      state.searchPageLoadedStart = -1;
+      scheduleGuestSearchReload({ immediate: true });
+    }
+  }
+}
+
+export function normalizeCacheMinutes(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.cacheMinutes;
+  return Math.min(n, CACHE_MINUTES_MAX);
+}
+
+export function normalizeProbeScope(value) {
+  return value === 'suggest' || value === 'search' || value === 'both'
+    ? value
+    : DEFAULT_SETTINGS.probeBlockedScope;
+}
+
+export function normalizeProbeConcurrency(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return DEFAULT_SETTINGS.probeBlockedConcurrency;
+  return Math.min(PROBE_CONCURRENCY_MAX, Math.max(1, n));
+}
+
+setSettings(loadSettings());

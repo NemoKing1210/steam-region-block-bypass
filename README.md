@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.16.10-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.17.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header, plus an opt-in guest `/search` page, without account cookies.
 
@@ -46,11 +46,12 @@ The script includes `@updateURL` and `@downloadURL` metadata pointing to the raw
 
 **To release a new version:**
 
-1. Bump `@version` in `steam-region-block-bypass.user.js` and `steam-region-block-bypass.meta.js` (and `package.json`).
-2. Add an entry to [`CHANGELOG.md`](CHANGELOG.md).
-3. Push to `main` (or create a GitHub Release).
+1. Bump `version` in `package.json` (SemVer).
+2. Run `npm run build` (refreshes root `.user.js` / `.meta.js`).
+3. Add an entry to [`CHANGELOG.md`](CHANGELOG.md).
+4. Push to `main` (or create a GitHub Release).
 
-Managers compare the installed `@version` with the remote metadata to decide whether to offer an update.
+Managers compare the installed `@version` with the remote metadata to decide whether to offer an update. See [DEVELOPMENT.md](DEVELOPMENT.md) for the full workflow.
 
 ## Features
 
@@ -204,19 +205,29 @@ Localized `@name` and `@description` tags are provided for en, ru, zh-CN, es, pt
 
 ## Development
 
+Built with **Vite** + **vite-plugin-monkey**. Edit ESM modules under [`src/`](src/), then `npm run build` to refresh the committed install artifacts. Details: [DEVELOPMENT.md](DEVELOPMENT.md), [CONTRIBUTING.md](CONTRIBUTING.md).
+
+```bash
+npm install
+npm run dev      # live "dev:" userscript via Vite
+npm run build    # production → dist/ + root .user.js / .meta.js
+npm run gateway  # optional local proxy gateway
+```
+
 ### Local workflow (Violentmonkey)
 
-1. Clone this repository.
-2. In Violentmonkey, install from the local `steam-region-block-bypass.user.js` file.
+1. Clone this repository and run `npm run build`.
+2. In Violentmonkey, install from the local root `steam-region-block-bypass.user.js`.
 3. Enable **Track local file** before closing the install dialog.
-4. Edit the file in your IDE — changes apply after a page reload.
+4. Edit `src/`, rebuild, reload the Steam page — or use `npm run dev` for HMR.
 
 ### Local workflow (Tampermonkey)
 
 Tampermonkey does not track local files natively. Options:
 
-- Reinstall from URL after each change, or
-- Use a local HTTP server and temporarily point `@updateURL` / `@downloadURL` to `http://localhost:...` during development (do not commit local URLs).
+- Use `npm run dev` and install the served `dev:` userscript, or
+- Reinstall from the built file / URL after each `npm run build`, or
+- Temporarily point `@updateURL` / `@downloadURL` to `http://localhost:...` during development (do not commit local URLs).
 
 ### Configuration
 
