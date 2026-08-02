@@ -48,6 +48,10 @@ export const DEFAULT_SETTINGS = {
   probeBlockedScope: 'both',
   /** Parallel account probes (1–5) */
   probeBlockedConcurrency: 3,
+  /** Floating toast notifications for setting changes etc. */
+  toastsEnabled: true,
+  /** top-right | top-left | bottom-right | bottom-left */
+  toastPosition: 'top-right',
 };
 
 export const SUPPORTED_LOCALES = [

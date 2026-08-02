@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.17.0-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.18.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header, plus an opt-in guest `/search` page, without account cookies.
 
@@ -238,6 +238,8 @@ Settings are stored in userscript storage (`srbb_settings`) via the header panel
 | Bypass trigger | Auto | **Auto** runs on region-error pages; **Show button** waits for a manual offer |
 | Store country (`cc`) | empty | Optional Steam country code for guest requests |
 | Cache duration (minutes) | `60` | Reuse a successful guest page for this long; `0` disables cache. Banner **Reload** always fetches fresh |
+| Show toast notifications | on | Steam-style floating notices for setting changes; can be turned off |
+| Toast position | Top right | Corner for toasts: top/bottom × left/right |
 | Use proxy gateway | off | Route the anonymous fetch through a gateway |
 | Gateway mode | `gateway` | How the target URL is appended to `host:port` |
 | Host / Port | empty | Gateway address (e.g. `127.0.0.1` / `8765`) |

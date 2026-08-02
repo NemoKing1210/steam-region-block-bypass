@@ -1153,6 +1153,179 @@ a.srbb-search-row--blocked.search_result_row:hover {
   box-shadow: 0 0 0 1px rgba(169,72,71,.75);
 }
 
+/* —— Toasts —— */
+.srbb-toasts {
+  position: fixed;
+  z-index: 1000001;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: visible;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+.srbb-toasts[data-position="top-right"] {
+  top: 12px;
+  right: 12px;
+  align-items: flex-end;
+}
+.srbb-toasts[data-position="top-left"] {
+  top: 12px;
+  left: 12px;
+  align-items: flex-start;
+}
+.srbb-toasts[data-position="bottom-right"] {
+  bottom: 12px;
+  right: 12px;
+  align-items: flex-end;
+}
+.srbb-toasts[data-position="bottom-left"] {
+  bottom: 12px;
+  left: 12px;
+  align-items: flex-start;
+}
+
+.srbb-toast {
+  pointer-events: auto;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px 12px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #1b2838 0%, #16202d 100%);
+  border: 1px solid #000;
+  border-radius: 3px;
+  border-left-width: 3px;
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  color: #c7d5e0;
+  font: 12px/1.4 "Motiva Sans", Arial, Helvetica, sans-serif;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(12px);
+  transition: opacity .2s ease, transform .22s ease;
+  overflow: hidden;
+}
+.srbb-toasts[data-position="top-left"] .srbb-toast,
+.srbb-toasts[data-position="bottom-left"] .srbb-toast {
+  transform: translateX(-12px);
+}
+.srbb-toasts[data-position="bottom-right"] .srbb-toast,
+.srbb-toasts[data-position="bottom-left"] .srbb-toast {
+  transform: translateY(10px);
+}
+.srbb-toasts[data-position="bottom-left"] .srbb-toast {
+  transform: translate(-12px, 10px);
+}
+.srbb-toast.is-visible {
+  opacity: 1;
+  transform: translate(0, 0) !important;
+}
+.srbb-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.srbb-toasts[data-position^="bottom"] .srbb-toast.is-leaving {
+  transform: translateY(6px);
+}
+
+.srbb-toast[data-kind="success"] { border-left-color: #a4d007; }
+.srbb-toast[data-kind="error"] { border-left-color: #a94847; }
+.srbb-toast[data-kind="warning"] { border-left-color: #c6a32e; }
+.srbb-toast[data-kind="info"] { border-left-color: #66c0f4; }
+
+.srbb-toast__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  margin-top: 1px;
+}
+.srbb-toast[data-kind="success"] .srbb-toast__icon { color: #beee11; }
+.srbb-toast[data-kind="error"] .srbb-toast__icon { color: #ffc9c9; }
+.srbb-toast[data-kind="warning"] .srbb-toast__icon { color: #e7c65c; }
+.srbb-toast[data-kind="info"] .srbb-toast__icon { color: #66c0f4; }
+
+.srbb-toast__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.srbb-toast__title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.srbb-toast__message {
+  margin-top: 2px;
+  color: #8f98a0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.srbb-toast__close {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: #8f98a0;
+  font: 700 16px/22px "Motiva Sans", Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+.srbb-toast__close:hover {
+  color: #fff;
+  background: rgba(255,255,255,.06);
+}
+
+.srbb-toast__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(0,0,0,.35);
+  overflow: hidden;
+}
+.srbb-toast__progress > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(1);
+  background: currentColor;
+  opacity: .85;
+}
+.srbb-toast[data-kind="success"] .srbb-toast__progress > span { background: #a4d007; }
+.srbb-toast[data-kind="error"] .srbb-toast__progress > span { background: #a94847; }
+.srbb-toast[data-kind="warning"] .srbb-toast__progress > span { background: #c6a32e; }
+.srbb-toast[data-kind="info"] .srbb-toast__progress > span { background: #66c0f4; }
+
+.srbb-toast-fields.is-disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .srbb-toast {
+    transition: opacity .15s ease;
+    transform: none !important;
+  }
+  .srbb-toast.is-visible,
+  .srbb-toast.is-leaving {
+    transform: none !important;
+  }
+  .srbb-toast__progress > span {
+    transition: none !important;
+  }
+}
+
 @media (max-width: 900px) {
   #srbb-settings-btn.srbb-header-btn {
     padding: 0 8px;

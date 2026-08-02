@@ -24,6 +24,12 @@ import {
   clearBlockedApps,
 } from '../blocked-apps.js';
 import { buildAppHref } from './suggest.js';
+import {
+  showToast,
+  toastSettingChanged,
+  normalizeToastPosition,
+  syncToastContainer,
+} from './toast.js';
 
 export function observeHeader() {
   const observer = new MutationObserver(() => {
@@ -187,6 +193,29 @@ export function ensurePanel() {
             <input type="number" id="srbb-cache-minutes" min="0" max="${CACHE_MINUTES_MAX}" step="1" placeholder="60" inputmode="numeric" />
           </label>
           <p class="srbb-hint">${escapeHtml(t('cacheMinutesHint'))}</p>
+        </div>
+
+        <div class="srbb-panel__section srbb-panel__section--row">
+          <label class="srbb-switch">
+            <input type="checkbox" id="srbb-toasts-enabled" />
+            <span class="srbb-switch__track"></span>
+            <span class="srbb-switch__label">${escapeHtml(t('toastsEnabled'))}</span>
+          </label>
+          <span class="srbb-pill" id="srbb-toasts-pill">${escapeHtml(t('off'))}</span>
+        </div>
+        <p class="srbb-hint srbb-panel__section" style="padding-top:0">${escapeHtml(t('toastsEnabledHint'))}</p>
+
+        <div class="srbb-panel__section srbb-toast-fields" id="srbb-toast-fields">
+          <label class="srbb-field">
+            <span class="srbb-field__label">${escapeHtml(t('toastPosition'))}</span>
+            <select id="srbb-toast-position">
+              <option value="top-right">${escapeHtml(t('toastPositionTopRight'))}</option>
+              <option value="top-left">${escapeHtml(t('toastPositionTopLeft'))}</option>
+              <option value="bottom-right">${escapeHtml(t('toastPositionBottomRight'))}</option>
+              <option value="bottom-left">${escapeHtml(t('toastPositionBottomLeft'))}</option>
+            </select>
+          </label>
+          <p class="srbb-hint">${escapeHtml(t('toastPositionHint'))}</p>
         </div>
       </div>
 
@@ -367,6 +396,11 @@ export function ensurePanel() {
   panel.querySelector('[data-srbb="save"]').addEventListener('click', () => {
     persistPanelForm();
     togglePanel(false);
+    showToast({
+      title: t('toastSettingsSaved'),
+      kind: 'success',
+      id: 'srbb-settings-saved',
+    });
   });
   panel.querySelector('[data-srbb="save-run"]').addEventListener('click', () => {
     persistPanelForm();
@@ -380,36 +414,94 @@ export function ensurePanel() {
 
   const enabled = panel.querySelector('#srbb-proxy-enabled');
   enabled.addEventListener('change', () => syncProxyFieldsState());
-  panel.querySelector('#srbb-search-unblocked')?.addEventListener('change', () => {
-    saveSettings({ searchUnblocked: panel.querySelector('#srbb-search-unblocked').checked });
+  panel.querySelector('#srbb-toasts-enabled')?.addEventListener('change', () => {
+    const on = !!panel.querySelector('#srbb-toasts-enabled').checked;
+    saveSettings({ toastsEnabled: on });
+    syncToastPanelState();
+    if (on) {
+      showToast({
+        title: t('toastsEnabled'),
+        message: t('toastSettingOn'),
+        kind: 'success',
+        id: 'srbb-toast-settings',
+        force: true,
+      });
+    } else {
+      showToast({
+        title: t('toastToastsDisabled'),
+        kind: 'info',
+        id: 'srbb-toast-settings',
+        force: true,
+      });
+    }
   });
-  panel.querySelector('#srbb-search-page-unblocked')?.addEventListener('change', () => {
-    saveSettings({
-      searchPageUnblocked: panel.querySelector('#srbb-search-page-unblocked').checked,
+  panel.querySelector('#srbb-toast-position')?.addEventListener('change', () => {
+    const position = normalizeToastPosition(panel.querySelector('#srbb-toast-position').value);
+    saveSettings({ toastPosition: position });
+    syncToastContainer();
+    showToast({
+      title: t('toastPosition'),
+      message: t(toastPositionLabelKey(position)),
+      kind: 'info',
+      id: 'srbb-toast-position-demo',
+      force: true,
     });
   });
+  panel.querySelector('#srbb-search-unblocked')?.addEventListener('change', () => {
+    const on = panel.querySelector('#srbb-search-unblocked').checked;
+    saveSettings({ searchUnblocked: on });
+    toastSettingChanged(t('searchUnblocked'), on, { id: 'srbb-setting-search' });
+  });
+  panel.querySelector('#srbb-search-page-unblocked')?.addEventListener('change', () => {
+    const on = panel.querySelector('#srbb-search-page-unblocked').checked;
+    saveSettings({ searchPageUnblocked: on });
+    toastSettingChanged(t('searchPageUnblocked'), on, { id: 'srbb-setting-search-page' });
+  });
   panel.querySelector('#srbb-remember-blocked')?.addEventListener('change', () => {
-    saveSettings({ rememberBlockedApps: panel.querySelector('#srbb-remember-blocked').checked });
+    const on = panel.querySelector('#srbb-remember-blocked').checked;
+    saveSettings({ rememberBlockedApps: on });
     syncBlockedAppsPanel();
     syncProbePanelState();
+    toastSettingChanged(t('rememberBlockedApps'), on, { id: 'srbb-setting-remember' });
   });
   panel.querySelector('#srbb-mark-blocked-search')?.addEventListener('change', () => {
-    saveSettings({ markBlockedInSearch: panel.querySelector('#srbb-mark-blocked-search').checked });
+    const on = panel.querySelector('#srbb-mark-blocked-search').checked;
+    saveSettings({ markBlockedInSearch: on });
+    toastSettingChanged(t('markBlockedInSearch'), on, { id: 'srbb-setting-mark' });
   });
   panel.querySelector('#srbb-probe-blocked')?.addEventListener('change', () => {
-    saveSettings({ probeBlockedInSearch: panel.querySelector('#srbb-probe-blocked').checked });
+    const on = panel.querySelector('#srbb-probe-blocked').checked;
+    saveSettings({ probeBlockedInSearch: on });
     syncProbePanelState();
+    toastSettingChanged(t('probeBlockedInSearch'), on, { id: 'srbb-setting-probe' });
   });
   panel.querySelector('#srbb-probe-scope')?.addEventListener('change', () => {
-    saveSettings({ probeBlockedScope: panel.querySelector('#srbb-probe-scope').value });
+    const value = panel.querySelector('#srbb-probe-scope').value;
+    saveSettings({ probeBlockedScope: value });
+    showToast({
+      title: t('probeBlockedScope'),
+      message: probeScopeLabel(value),
+      kind: 'info',
+      id: 'srbb-setting-probe-scope',
+    });
   });
   panel.querySelector('#srbb-probe-concurrency')?.addEventListener('change', () => {
-    saveSettings({
-      probeBlockedConcurrency: panel.querySelector('#srbb-probe-concurrency').value,
+    const value = panel.querySelector('#srbb-probe-concurrency').value;
+    saveSettings({ probeBlockedConcurrency: value });
+    showToast({
+      title: t('probeBlockedConcurrency'),
+      message: String(value),
+      kind: 'info',
+      id: 'srbb-setting-probe-concurrency',
     });
   });
   panel.querySelector('[data-srbb="clear-blocked"]')?.addEventListener('click', () => {
     clearBlockedApps();
+    showToast({
+      title: t('toastBlockedCleared'),
+      kind: 'success',
+      id: 'srbb-blocked-cleared',
+    });
   });
   panel.querySelector('[data-srbb="view-blocked"]')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -450,6 +542,7 @@ export function fillPanelForm() {
   panel.querySelector('#srbb-proxy-user').value = state.settings.proxyUser || '';
   panel.querySelector('#srbb-proxy-pass').value = state.settings.proxyPass || '';
   syncProxyFieldsState();
+  syncToastPanelState();
   syncSearchPanelToggle();
   syncBlockedAppsPanel();
   syncProbePanelState();
@@ -526,6 +619,8 @@ export function persistPanelForm() {
     autoBypass: panel.querySelector('#srbb-auto').value !== 'button',
     countryCode: panel.querySelector('#srbb-cc').value.trim().toUpperCase(),
     cacheMinutes: normalizeCacheMinutes(panel.querySelector('#srbb-cache-minutes').value),
+    toastsEnabled: !!panel.querySelector('#srbb-toasts-enabled')?.checked,
+    toastPosition: normalizeToastPosition(panel.querySelector('#srbb-toast-position')?.value),
     proxyEnabled: panel.querySelector('#srbb-proxy-enabled').checked,
     proxyMode: panel.querySelector('#srbb-proxy-mode').value,
     proxyHost: panel.querySelector('#srbb-proxy-host').value.trim(),
@@ -550,6 +645,44 @@ export function syncProxyFieldsState() {
   const pill = panel.querySelector('#srbb-proxy-pill');
   pill.textContent = on ? t('on') : t('off');
   pill.classList.toggle('is-on', on);
+}
+
+export function syncToastPanelState() {
+  const panel = document.getElementById('srbb-panel');
+  if (!panel) return;
+  const on = state.settings.toastsEnabled !== false;
+  const cb = panel.querySelector('#srbb-toasts-enabled');
+  const pill = panel.querySelector('#srbb-toasts-pill');
+  const fields = panel.querySelector('#srbb-toast-fields');
+  const position = panel.querySelector('#srbb-toast-position');
+  if (cb) cb.checked = on;
+  if (pill) {
+    pill.textContent = on ? t('on') : t('off');
+    pill.classList.toggle('is-on', on);
+  }
+  if (fields) fields.classList.toggle('is-disabled', !on);
+  if (position) position.value = normalizeToastPosition(state.settings.toastPosition);
+  syncToastContainer();
+}
+
+function toastPositionLabelKey(position) {
+  switch (normalizeToastPosition(position)) {
+    case 'top-left':
+      return 'toastPositionTopLeft';
+    case 'bottom-right':
+      return 'toastPositionBottomRight';
+    case 'bottom-left':
+      return 'toastPositionBottomLeft';
+    default:
+      return 'toastPositionTopRight';
+  }
+}
+
+function probeScopeLabel(value) {
+  const scope = normalizeProbeScope(value);
+  if (scope === 'suggest') return t('probeBlockedScopeSuggest');
+  if (scope === 'search') return t('probeBlockedScopeSearch');
+  return t('probeBlockedScopeBoth');
 }
 
 export function togglePanel(force) {

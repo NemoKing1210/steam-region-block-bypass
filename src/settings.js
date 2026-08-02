@@ -10,6 +10,7 @@ import { state, setSettings } from './state.js';
 import { syncSearchPanelToggle } from './features/panel.js';
 import { syncSearchGuestMode } from './features/suggest.js';
 import { isSearchPage, scheduleGuestSearchReload } from './features/search-page.js';
+import { normalizeToastPosition, syncToastContainer } from './features/toast.js';
 
 export function loadSettings() {
   let raw = GM_getValue(STORAGE_KEY, null);
@@ -20,6 +21,8 @@ export function loadSettings() {
   merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
   merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
   merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
+  merged.toastPosition = normalizeToastPosition(merged.toastPosition);
+  merged.toastsEnabled = merged.toastsEnabled !== false;
   return merged;
 }
 
@@ -40,8 +43,13 @@ export function saveSettings(next) {
   state.settings.cacheMinutes = normalizeCacheMinutes(state.settings.cacheMinutes);
   state.settings.probeBlockedScope = normalizeProbeScope(state.settings.probeBlockedScope);
   state.settings.probeBlockedConcurrency = normalizeProbeConcurrency(state.settings.probeBlockedConcurrency);
+  state.settings.toastPosition = normalizeToastPosition(state.settings.toastPosition);
+  state.settings.toastsEnabled = state.settings.toastsEnabled !== false;
   GM_setValue(STORAGE_KEY, state.settings);
   setSettings(state.settings);
+  if ('toastPosition' in next || 'toastsEnabled' in next) {
+    syncToastContainer();
+  }
   const searchChanged =
     ('searchUnblocked' in next && prevSearch !== state.settings.searchUnblocked) ||
     ('searchPageUnblocked' in next && prevSearchPage !== state.settings.searchPageUnblocked);
