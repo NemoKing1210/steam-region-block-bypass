@@ -2,7 +2,7 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.18.0-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.19.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header, plus an opt-in guest `/search` page, without account cookies.
 
@@ -62,12 +62,13 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 - **Age-gate cookies** — sends `birthtime` / mature-content cookies so guest pages are less likely to stop at the age check
 - **Optional store country (`cc`)** — override Steam store country for the guest request
 - **Proxy gateway panel** — enable/disable, host, port, username, password, URL mode
-- **Steam-like UI** — settings entry in the account dropdown (`#account_dropdown`, SteamDB-style); logged-out fallback button in `#global_actions`; centered modal settings panel with dimmed backdrop
+- **Steam-like UI** — settings entry in the account dropdown (`#account_dropdown`, SteamDB-style); logged-out fallback button in `#global_actions`; centered modal settings panel with dimmed backdrop (General / Cache / Search / Proxy / About)
 - **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl
 - **Manual controls** — reload injected content, open settings from the banner or userscript manager menu
 - **Guest search suggestions** — on by default: anonymous suggest dropdown via the same guest fetch stack (proxy / `cc` / cache); disable in **Region Bypass → Search**
 - **Guest `/search` page** — opt-in: anonymous refetch/inject for `store.steampowered.com/search` (same stack); enable separately in **Region Bypass → Search**
-- **Blocked games registry** — remembers region-blocked app IDs and highlights them in guest search (dropdown and `/search` results)
+- **Cache tab** — usage meter, TTL and max entries, choose which guest pages to store, browse/remove cached HTML, browse/clear blocked games list
+- **Blocked games registry** — remembers region-blocked app IDs (Search tab toggles) and highlights them in guest search; list and clear on **Cache**
 
 ## Supported pages
 
@@ -237,9 +238,11 @@ Settings are stored in userscript storage (`srbb_settings`) via the header panel
 |---------|---------|-------------|
 | Bypass trigger | Auto | **Auto** runs on region-error pages; **Show button** waits for a manual offer |
 | Store country (`cc`) | empty | Optional Steam country code for guest requests |
-| Cache duration (minutes) | `60` | Reuse a successful guest page for this long; `0` disables cache. Banner **Reload** always fetches fresh |
 | Show toast notifications | on | Steam-style floating notices for setting changes; can be turned off |
 | Toast position | Top right | Corner for toasts: top/bottom × left/right |
+| Cache duration (minutes) | `60` | **Cache** tab: reuse a successful guest page for this long; `0` disables cache. Banner **Reload** always fetches fresh |
+| Max cached pages | `30` | **Cache** tab: newest guest HTML entries kept (soft 10 MB meter budget) |
+| Cache app / search pages | on / on | **Cache** tab: which guest HTML kinds to store; off stops writes and prunes that kind |
 | Use proxy gateway | off | Route the anonymous fetch through a gateway |
 | Gateway mode | `gateway` | How the target URL is appended to `host:port` |
 | Host / Port | empty | Gateway address (e.g. `127.0.0.1` / `8765`) |

@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-08-02
+
+### Added
+
+- **Cache** settings tab (usage meter with category breakdown, fill badge on the tab, TTL, max page entries, toggles for app vs search page HTML, scrollable entry list with per-item remove, clear page / blocked / all)
+- Settings: `cacheAppPages`, `cacheSearchPages`, `cacheMaxEntries` (default 30, soft 10 MB budget for the meter)
+
+### Changed
+
+- Cache duration (`cacheMinutes`) moved from General to the Cache tab
+- Search tab no longer shows the blocked-games list / clear controls (browse and clear live on **Cache**; remember / highlight / probe stay on Search)
+
 ## [1.18.0] - 2026-08-02
 
 ### Added

@@ -2,7 +2,6 @@ import {
   REPO_URL,
   AUTHOR_URL,
   ISSUES_URL,
-  CACHE_MINUTES_MAX,
   SCRIPT_VERSION,
   SCRIPT_AUTHOR,
   SCRIPT_LICENSE,
@@ -12,24 +11,25 @@ import { t } from '../i18n/index.js';
 import { escapeHtml } from '../utils/html.js';
 import {
   saveSettings,
-  normalizeCacheMinutes,
   normalizeProbeScope,
   normalizeProbeConcurrency,
 } from '../settings.js';
 import { isRegionBlockedPage, isHostLoggedIn } from '../detect.js';
 import { bypassRegionBlock } from '../bypass.js';
 import {
-  getBlockedAppsCount,
-  listBlockedAppsEntries,
-  clearBlockedApps,
-} from '../blocked-apps.js';
-import { buildAppHref } from './suggest.js';
-import {
   showToast,
   toastSettingChanged,
   normalizeToastPosition,
   syncToastContainer,
 } from './toast.js';
+import {
+  buildCacheTabButtonHtml,
+  buildCachePaneHtml,
+  bindCachePane,
+  fillCachePane,
+  applyCachePaneOnSave,
+  refreshCachePane,
+} from './panel-cache.js';
 
 export function observeHeader() {
   const observer = new MutationObserver(() => {
@@ -161,6 +161,7 @@ export function ensurePanel() {
 
     <div class="srbb-panel__tabs" role="tablist">
       <button type="button" class="srbb-panel__tab is-active" role="tab" data-srbb-tab="general" aria-selected="true">${escapeHtml(t('tabGeneral'))}</button>
+      ${buildCacheTabButtonHtml()}
       <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="search" aria-selected="false">${escapeHtml(t('tabSearch'))}</button>
       <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="proxy" aria-selected="false">${escapeHtml(t('tabProxy'))}</button>
       <button type="button" class="srbb-panel__tab" role="tab" data-srbb-tab="about" aria-selected="false">${escapeHtml(t('tabAbout'))}</button>
@@ -187,14 +188,6 @@ export function ensurePanel() {
           <p class="srbb-hint">${escapeHtml(t('storeCountryHint'))}</p>
         </div>
 
-        <div class="srbb-panel__section">
-          <label class="srbb-field">
-            <span class="srbb-field__label">${escapeHtml(t('cacheMinutes'))}</span>
-            <input type="number" id="srbb-cache-minutes" min="0" max="${CACHE_MINUTES_MAX}" step="1" placeholder="60" inputmode="numeric" />
-          </label>
-          <p class="srbb-hint">${escapeHtml(t('cacheMinutesHint'))}</p>
-        </div>
-
         <div class="srbb-panel__section srbb-panel__section--row">
           <label class="srbb-switch">
             <input type="checkbox" id="srbb-toasts-enabled" />
@@ -218,6 +211,8 @@ export function ensurePanel() {
           <p class="srbb-hint">${escapeHtml(t('toastPositionHint'))}</p>
         </div>
       </div>
+
+      ${buildCachePaneHtml()}
 
       <div class="srbb-panel__tabpane" data-srbb-pane="search" role="tabpanel" hidden>
         <div class="srbb-panel__section srbb-panel__section--row">
@@ -288,13 +283,6 @@ export function ensurePanel() {
           </label>
           <p class="srbb-hint">${escapeHtml(t('probeBlockedConcurrencyHint'))}</p>
         </div>
-
-        <div class="srbb-panel__section srbb-panel__section--row">
-          <span class="srbb-blocked-count" id="srbb-blocked-count"></span>
-          <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="view-blocked">${escapeHtml(t('viewBlockedApps'))}</button>
-          <button type="button" class="srbb-btn srbb-btn--ghost" data-srbb="clear-blocked">${escapeHtml(t('clearBlockedApps'))}</button>
-        </div>
-        <div class="srbb-blocked-list" id="srbb-blocked-list" hidden></div>
       </div>
 
       <div class="srbb-panel__tabpane" data-srbb-pane="proxy" role="tabpanel" hidden>
@@ -390,6 +378,7 @@ export function ensurePanel() {
   panel.querySelectorAll('[data-srbb-tab]').forEach((tab) => {
     tab.addEventListener('click', () => switchPanelTab(tab.getAttribute('data-srbb-tab')));
   });
+  bindCachePane(panel);
   panel.querySelectorAll('[data-srbb="close"]').forEach((el) =>
     el.addEventListener('click', () => togglePanel(false))
   );
@@ -495,19 +484,6 @@ export function ensurePanel() {
       id: 'srbb-setting-probe-concurrency',
     });
   });
-  panel.querySelector('[data-srbb="clear-blocked"]')?.addEventListener('click', () => {
-    clearBlockedApps();
-    showToast({
-      title: t('toastBlockedCleared'),
-      kind: 'success',
-      id: 'srbb-blocked-cleared',
-    });
-  });
-  panel.querySelector('[data-srbb="view-blocked"]')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleBlockedAppsList();
-  });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.panelOpen) togglePanel(false);
@@ -525,6 +501,7 @@ export function switchPanelTab(tabId) {
   panel.querySelectorAll('[data-srbb-pane]').forEach((pane) => {
     pane.hidden = pane.getAttribute('data-srbb-pane') !== tabId;
   });
+  if (tabId === 'cache') refreshCachePane(panel);
 }
 
 export function fillPanelForm() {
@@ -532,9 +509,6 @@ export function fillPanelForm() {
   if (!panel) return;
   panel.querySelector('#srbb-auto').value = state.settings.autoBypass ? 'auto' : 'button';
   panel.querySelector('#srbb-cc').value = state.settings.countryCode || '';
-  panel.querySelector('#srbb-cache-minutes').value = String(
-    normalizeCacheMinutes(state.settings.cacheMinutes)
-  );
   panel.querySelector('#srbb-proxy-enabled').checked = !!state.settings.proxyEnabled;
   panel.querySelector('#srbb-proxy-mode').value = state.settings.proxyMode || 'gateway';
   panel.querySelector('#srbb-proxy-host').value = state.settings.proxyHost || '';
@@ -546,6 +520,7 @@ export function fillPanelForm() {
   syncSearchPanelToggle();
   syncBlockedAppsPanel();
   syncProbePanelState();
+  fillCachePane(panel);
 }
 
 export function syncBlockedAppsPanel() {
@@ -553,72 +528,19 @@ export function syncBlockedAppsPanel() {
   if (!panel) return;
   const remember = panel.querySelector('#srbb-remember-blocked');
   const mark = panel.querySelector('#srbb-mark-blocked-search');
-  const countEl = panel.querySelector('#srbb-blocked-count');
-  const clearBtn = panel.querySelector('[data-srbb="clear-blocked"]');
-  const viewBtn = panel.querySelector('[data-srbb="view-blocked"]');
-  const listEl = panel.querySelector('#srbb-blocked-list');
   if (remember) remember.checked = !!state.settings.rememberBlockedApps;
   if (mark) mark.checked = !!state.settings.markBlockedInSearch;
-  const count = getBlockedAppsCount();
-  if (countEl) countEl.textContent = t('blockedAppsCount', { count });
-  if (clearBtn) clearBtn.disabled = count === 0;
-  if (viewBtn) viewBtn.disabled = count === 0;
-  if (listEl && !listEl.hidden) {
-    renderBlockedAppsList(listEl);
-  }
-  if (viewBtn && listEl) {
-    viewBtn.textContent = listEl.hidden ? t('viewBlockedApps') : t('hideBlockedApps');
-  }
-}
-
-export function toggleBlockedAppsList() {
-  const panel = document.getElementById('srbb-panel');
-  const listEl = panel?.querySelector('#srbb-blocked-list');
-  const viewBtn = panel?.querySelector('[data-srbb="view-blocked"]');
-  if (!listEl) return;
-  if (getBlockedAppsCount() === 0) {
-    listEl.hidden = true;
-    listEl.innerHTML = '';
-    if (viewBtn) {
-      viewBtn.disabled = true;
-      viewBtn.textContent = t('viewBlockedApps');
-    }
-    return;
-  }
-  listEl.hidden = !listEl.hidden;
-  if (!listEl.hidden) renderBlockedAppsList(listEl);
-  if (viewBtn) {
-    viewBtn.textContent = listEl.hidden ? t('viewBlockedApps') : t('hideBlockedApps');
-  }
-}
-
-export function renderBlockedAppsList(listEl) {
-  const entries = listBlockedAppsEntries();
-  if (!entries.length) {
-    listEl.innerHTML = `<div class="srbb-blocked-list__empty">${escapeHtml(t('blockedAppsEmpty'))}</div>`;
-    return;
-  }
-  listEl.innerHTML = entries
-    .map((entry) => {
-      const label = entry.name || t('blockedAppUntitled', { id: entry.id });
-      const href = buildAppHref(entry.id, entry.name);
-      return `
-        <a class="srbb-blocked-list__item" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
-          <span class="srbb-blocked-list__name">${escapeHtml(label)}</span>
-          <span class="srbb-blocked-list__id">${escapeHtml(entry.id)}</span>
-        </a>
-      `;
-    })
-    .join('');
+  refreshCachePane(panel);
 }
 
 export function persistPanelForm() {
   const panel = document.getElementById('srbb-panel');
   if (!panel) return;
+  const cacheSettings = applyCachePaneOnSave(panel);
   saveSettings({
     autoBypass: panel.querySelector('#srbb-auto').value !== 'button',
     countryCode: panel.querySelector('#srbb-cc').value.trim().toUpperCase(),
-    cacheMinutes: normalizeCacheMinutes(panel.querySelector('#srbb-cache-minutes').value),
+    ...cacheSettings,
     toastsEnabled: !!panel.querySelector('#srbb-toasts-enabled')?.checked,
     toastPosition: normalizeToastPosition(panel.querySelector('#srbb-toast-position')?.value),
     proxyEnabled: panel.querySelector('#srbb-proxy-enabled').checked,
@@ -635,6 +557,7 @@ export function persistPanelForm() {
     probeBlockedScope: panel.querySelector('#srbb-probe-scope')?.value || 'both',
     probeBlockedConcurrency: panel.querySelector('#srbb-probe-concurrency')?.value || 3,
   });
+  refreshCachePane(panel);
 }
 
 export function syncProxyFieldsState() {

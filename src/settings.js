@@ -4,6 +4,7 @@ import {
   SEARCH_DEFAULT_ON_FLAG,
   DEFAULT_SETTINGS,
   CACHE_MINUTES_MAX,
+  CACHE_MAX_ENTRIES_CAP,
   PROBE_CONCURRENCY_MAX,
 } from './constants.js';
 import { state, setSettings } from './state.js';
@@ -19,6 +20,9 @@ export function loadSettings() {
   const merged = { ...DEFAULT_SETTINGS, ...raw };
   delete merged.rememberSearchTerm;
   merged.cacheMinutes = normalizeCacheMinutes(merged.cacheMinutes);
+  merged.cacheMaxEntries = normalizeCacheMaxEntries(merged.cacheMaxEntries);
+  merged.cacheAppPages = merged.cacheAppPages !== false;
+  merged.cacheSearchPages = merged.cacheSearchPages !== false;
   merged.probeBlockedScope = normalizeProbeScope(merged.probeBlockedScope);
   merged.probeBlockedConcurrency = normalizeProbeConcurrency(merged.probeBlockedConcurrency);
   merged.toastPosition = normalizeToastPosition(merged.toastPosition);
@@ -41,6 +45,9 @@ export function saveSettings(next) {
   const prevSearchPage = state.settings.searchPageUnblocked;
   state.settings = { ...state.settings, ...next };
   state.settings.cacheMinutes = normalizeCacheMinutes(state.settings.cacheMinutes);
+  state.settings.cacheMaxEntries = normalizeCacheMaxEntries(state.settings.cacheMaxEntries);
+  state.settings.cacheAppPages = state.settings.cacheAppPages !== false;
+  state.settings.cacheSearchPages = state.settings.cacheSearchPages !== false;
   state.settings.probeBlockedScope = normalizeProbeScope(state.settings.probeBlockedScope);
   state.settings.probeBlockedConcurrency = normalizeProbeConcurrency(state.settings.probeBlockedConcurrency);
   state.settings.toastPosition = normalizeToastPosition(state.settings.toastPosition);
@@ -68,6 +75,12 @@ export function normalizeCacheMinutes(value) {
   const n = Math.round(Number(value));
   if (!Number.isFinite(n) || n < 0) return DEFAULT_SETTINGS.cacheMinutes;
   return Math.min(n, CACHE_MINUTES_MAX);
+}
+
+export function normalizeCacheMaxEntries(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n) || n < 1) return DEFAULT_SETTINGS.cacheMaxEntries;
+  return Math.min(n, CACHE_MAX_ENTRIES_CAP);
 }
 
 export function normalizeProbeScope(value) {

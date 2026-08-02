@@ -13,8 +13,12 @@ export const CACHE_STORAGE_KEY = 'srbb_page_cache';
 export const BLOCKED_APPS_STORAGE_KEY = 'srbb_blocked_apps';
 /** One-time upgrade: guest search used to default off */
 export const SEARCH_DEFAULT_ON_FLAG = 'srbb_migrated_search_default_on_v1';
-/** Soft cap so GM storage does not grow without bound */
+/** Default soft cap so GM storage does not grow without bound */
 export const CACHE_MAX_ENTRIES = 30;
+/** Upper bound for the settings field (entries) */
+export const CACHE_MAX_ENTRIES_CAP = 100;
+/** Soft byte budget for the Cache tab meter (HTML pages are large) */
+export const CACHE_SOFT_LIMIT_BYTES = 10 * 1024 * 1024;
 export const BLOCKED_APPS_MAX_ENTRIES = 500;
 export const PROBE_CONCURRENCY_MAX = 5;
 /** How many guest suggest rows to fetch/show from /search/results */
@@ -34,6 +38,12 @@ export const DEFAULT_SETTINGS = {
   autoBypass: true, // true = replace immediately; false = show button
   /** Guest HTML TTL in minutes; 0 disables caching */
   cacheMinutes: 60,
+  /** Max guest HTML entries kept (newest by savedAt) */
+  cacheMaxEntries: CACHE_MAX_ENTRIES,
+  /** Persist guest app / bundle / sub page HTML */
+  cacheAppPages: true,
+  /** Persist guest /search page HTML */
+  cacheSearchPages: true,
   /** Guest search: anonymous suggest dropdown in the header */
   searchUnblocked: true,
   /** Guest /search page: anonymous refetch + inject (opt-in; off by default) */

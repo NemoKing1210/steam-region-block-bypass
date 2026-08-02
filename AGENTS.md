@@ -27,7 +27,7 @@ steam-region-block-bypass/
 │   ├── constants.js         # Keys, DEFAULT_SETTINGS, lang maps, REGION_PATTERNS
 │   ├── state.js             # Mutable runtime bag (settings, search tokens, caches)
 │   ├── settings.js          # load/save/migrate settings
-│   ├── cache.js             # srbb_page_cache
+│   ├── cache.js             # srbb_page_cache + Cache tab meter/stats
 │   ├── blocked-apps.js      # srbb_blocked_apps registry
 │   ├── gm.js                # anonymous + session GM_xmlhttpRequest
 │   ├── detect.js            # region-block detection, host login
@@ -37,7 +37,7 @@ steam-region-block-bypass/
 │   ├── i18n/                # MESSAGES + locale / Steam lang helpers
 │   ├── utils/               # html, pool
 │   ├── styles/              # CSS (injected via vite-plugin-monkey)
-│   └── features/            # panel, feedback, suggest, search-page, probe
+│   └── features/            # panel, panel-cache, feedback, suggest, search-page, probe, toast
 ├── scripts/
 │   ├── copy-dist.mjs
 │   ├── verify-artifacts.mjs
@@ -69,7 +69,7 @@ steam-region-block-bypass/
 
 Settings key: `srbb_settings`. Page cache: `srbb_page_cache`. Blocked apps: `srbb_blocked_apps`.
 
-UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback in `#global_actions`), centered modal panel `#srbb-panel` over `#srbb-panel-overlay`. Prefix classes/ids with `srbb-`.
+UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback in `#global_actions`), centered modal panel `#srbb-panel` over `#srbb-panel-overlay` with tabs General / Cache / Search / Proxy / About. Cache tab UI lives in `features/panel-cache.js` (meter/list builders in `cache.js`). Prefix classes/ids with `srbb-`.
 
 ## Conventions
 

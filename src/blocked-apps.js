@@ -1,4 +1,4 @@
-import { GM_setValue } from '$';
+import { GM_getValue, GM_setValue } from '$';
 import { BLOCKED_APPS_STORAGE_KEY, BLOCKED_APPS_MAX_ENTRIES } from './constants.js';
 import { state } from './state.js';
 import { syncBlockedAppsPanel } from './features/panel.js';
@@ -10,6 +10,19 @@ export function loadBlockedAppsStore() {
   const raw = GM_getValue(BLOCKED_APPS_STORAGE_KEY, null);
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   return raw;
+}
+
+/** Byte size + count for the Cache tab meter (separate GM store). */
+export function getBlockedAppsStorageStats() {
+  const store = loadBlockedAppsStore();
+  const count = Object.keys(store).length;
+  let bytes = 0;
+  try {
+    bytes = new TextEncoder().encode(JSON.stringify(store)).length;
+  } catch {
+    bytes = count * 48;
+  }
+  return { count, bytes };
 }
 
 export function pruneBlockedAppsStore(store) {
@@ -91,11 +104,6 @@ export function touchBlockedAppName(appId, name = '') {
 export function clearBlockedApps() {
   GM_setValue(BLOCKED_APPS_STORAGE_KEY, {});
   invalidateBlockedAppsIndex();
-  const listEl = document.getElementById('srbb-blocked-list');
-  if (listEl) {
-    listEl.hidden = true;
-    listEl.innerHTML = '';
-  }
   syncBlockedAppsPanel();
 }
 
