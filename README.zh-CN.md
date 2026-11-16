@@ -59,35 +59,20 @@ https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/st
 
 ## 更新
 
-脚本包含指向 GitHub 原始文件的 `@updateURL` 和 `@downloadURL` 元数据。受支持的管理器会自动检查更新（Tampermonkey：管理面板 → 检查间隔；Violentmonkey：类似）。
-
-**发布新版本：**
-
-1. 在 `package.json` 中提升 `version`（SemVer）。
-2. 运行 `npm run build`（刷新根目录的 `.user.js` / `.meta.js`）。
-3. 在 [`CHANGELOG.md`](CHANGELOG.md) 中添加条目。
-4. 推送到 `main`（或创建 GitHub Release）。
-
-管理器会将已安装的 `@version` 与远程元数据进行比较，以决定是否提供更新。完整流程见 [DEVELOPMENT.md](DEVELOPMENT.md)。
+脚本附带指向 GitHub 原始文件的 `@updateURL` 和 `@downloadURL` 元数据，因此受支持的管理器会自动检查更新。发布步骤见 [DEVELOPMENT.md](docs/DEVELOPMENT.md#releasing)。
 
 ## 功能
 
-- **优先移植式注入**——将访客游戏布局替换到正在使用的 `#responsive_page_template_content` 中，同时保留登录后的页头、会话全局变量、已加载的样式和脚本；`document.write` 保留为整页重写回退方案
-- **已登录队列控件恢复**——移植后重建愿望单、关注和忽略控件，并通过当前会话提交操作
-- **自动绕过或按钮**——在封锁页面上立即运行，或先显示手动操作提示
-- **匿名请求**——使用 `GM_xmlhttpRequest` 并设置 `anonymous: true`（不携带登录 Cookie）
-- **商店语言**——访客请求使用 `Steam_Language`、`?l=` 和 `Accept-Language`，使页面与你的 Steam 界面语言一致
-- **年龄验证 Cookie**——发送 `birthtime` / 成人内容 Cookie，降低访客页面停留在年龄验证的概率
-- **可选的商店国家/地区（`cc`）**——为访客请求覆盖 Steam 商店国家/地区
-- **代理网关面板**——启用/禁用、主机、端口、用户名、密码、URL 模式
-- **区域总开关 + 横幅控制**——可禁用页面绕过而不影响访客搜索；可按需隐藏区域横幅
-- **Steam 风格界面**——设置入口位于账号下拉菜单（`#account_dropdown`，SteamDB 风格）；未登录时在 `#global_actions` 中提供回退按钮；首页列表式面板，包含常规 / 搜索 / 缓存 / 代理 / 关于页面，支持草稿编辑、重置、取消、保存和保存并重新加载
-- **本地化界面**——面板和消息支持 en、ru、zh-CN、es、pt-BR、de、fr、ja、ko、pl；界面语言选择器支持浏览器自动检测
-- **手动控制**——重新加载注入内容，从横幅或用户脚本管理器菜单打开设置
-- **访客搜索建议**——默认开启：通过同一套访客请求栈（代理 / `cc` / 缓存）获取匿名建议下拉列表；可在 **Region Bypass → 搜索**中关闭
-- **访客 `/search` 页面**——选择性开启：对 `store.steampowered.com/search` 进行匿名重新获取和注入（同一套请求栈）；在 **Region Bypass → 搜索**中单独启用
-- **缓存标签页**——用量指示、TTL 和最大条目数、选择要存储的访客页面类型、浏览/删除缓存的 HTML、浏览/清空已封锁游戏列表
-- **已封锁游戏记录**——记住被区域封锁的应用 ID（搜索标签页中的开关），并在访客搜索中高亮显示；可在**缓存**标签页查看和清空
+- **恢复被区域封锁的应用页面**——匿名访客重新获取，然后将真实商店布局移植到当前文档中（仅在回退时进行整页重写）
+- **保持会话完整**——移植后，已登录用户的愿望单、关注和忽略控件继续正常工作
+- **自动绕过或手动提示**——在封锁页面上立即运行，或先显示操作提示
+- **访客搜索建议**——默认开启：商店页头中的匿名建议，并高亮显示已保存的封锁游戏
+- **访客 `/search` 页面**——可选择启用的搜索结果匿名重新获取与注入
+- **已封锁游戏记录**——记住被区域封锁的应用 ID，并可在探测搜索结果时自动检测
+- **缓存控制**——用量指示、TTL 和条目上限、按来源开关，以及缓存页面浏览器
+- **代理网关**——用于基于 IP 封锁的可选 HTTP 中继（[设置说明](docs/ARCHITECTURE.md#proxy-gateway)）
+- **Steam 风格设置面板**——常规 / 搜索 / 缓存 / 代理 / 关于页面、草稿编辑、保存和保存并重新加载
+- **10 种界面语言**——英语、俄语、中文、西班牙语、葡萄牙语（巴西）、德语、法语、日语、韩语、波兰语
 
 ## 支持的页面
 
@@ -96,204 +81,27 @@ https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/st
 | Steam 商店（应用） | `https://store.steampowered.com/app/{id}/…` | 区域错误绕过（主要用途） |
 | Steam 商店（搜索） | 页头搜索 + `https://store.steampowered.com/search/?term=…` | **访客搜索建议**和可选的**访客 /search 页面**（Region Bypass → 搜索） |
 
-当 Steam 显示**“This item is currently unavailable in your region”**（该商品在您所在地区不可用）时，应用页面即可生效——例如受限地区的 **Call of Duty: Modern Warfare 4**。**访客搜索建议**默认对页头搜索栏启用。完整 `/search` 页面的访客重新获取**默认关闭**（使用同一套匿名访客请求栈：代理 / `cc` / 缓存）——可在 **Region Bypass → 搜索**中开启。已保存的区域封锁应用 ID 可在搜索结果中高亮显示。
+当 Steam 显示**“This item is currently unavailable in your region”**（该商品在您所在地区不可用）时，应用页面即可生效——例如受限地区的 **Call of Duty: Modern Warfare 4**。页头搜索栏的**访客搜索建议**默认开启；访客 `/search` 页面则需在 **Region Bypass → 搜索**中主动启用。两者使用同一套匿名请求栈（代理 / `cc` / 缓存）。已保存的区域封锁应用 ID 可在搜索结果中高亮显示。
 
-## 工作原理
+## 面向开发者
 
-```
-Steam 应用页面加载
-       │
-       ▼
-#error_box / Oops 是否匹配 “unavailable in your region”？
-       │
-       ├── 否 ──► 空闲（设置按钮仍然可用）
-       │
-       └── 是 ──► 构建目标 URL（?l= 语言，可选 ?cc=）
-                │
-                ▼
-       命中缓存（在 TTL 内）？ ── 是 ──► 使用已存储的访客 HTML
-                │ 否
-                ▼
-       可选：通过代理网关重写 URL
-                │
-                ▼
-       GM_xmlhttpRequest(anonymous: true,
-         Cookie: birthtime…; Steam_Language=…)
-                │
-                ▼
-       解析 HTML → 提取 .game_page_background / #tabletGrid
-                │
-                ├── 仍被封锁？ ──► 显示错误 + 建议使用代理
-                │
-                ├── 移植到正在使用的页面外壳
-                │   ├── 同步 title、类名、样式、脚本
-                │   ├── 恢复已登录用户的队列控件
-                │   └── 失败 → document.write(访客 HTML) 回退
-                │
-                └── 横幅 + 功能重新启动（成功的 HTML 保存到缓存）
-```
+本节已移至专门的指南：
 
-### 访客搜索
+- [DEVELOPMENT.md](docs/DEVELOPMENT.md) — 构建、本地测试、发布、网关
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — 绕过的工作原理、仓库结构、元数据、权限、设置参考
+- [CONTRIBUTING.md](CONTRIBUTING.md) — 贡献者工作流与 PR 检查清单
+- [AGENTS.md](AGENTS.md) — 面向 AI 编码代理的说明
+- [SECURITY.md](SECURITY.md) — 安全策略与私下报告
+- [DESIGN.md](DESIGN.md) — 视觉语言与 CSS token 规则
 
-在 Region Bypass 面板（**搜索**标签页）中：
+## 其他用户脚本
 
-1. **访客搜索建议**（默认开启）——在商店页头搜索框中输入时，从 `/search/results` 匿名获取建议（最多 25 个游戏），在可用时用 `/api/storesearch/` 数据补充（回退：`/search/suggest`）。
-2. **访客 `/search` 页面**（默认关闭）——启用此设置后，提交搜索或打开 `/search/?term=…` 时会以访客身份重新获取结果并注入页面。
-3. 可选的**已封锁游戏记录**会高亮显示你之前在区域错误页面上打开过的应用。
-4. **在搜索中自动检测封锁**（默认开启）会使用你已登录的 Steam Cookie 探测每个结果，并将区域限制的应用加入封锁列表（进度条 + 逐项加载指示；范围和并发数可配置）。
+同一作者的其他用户脚本：
 
-使用与页面绕过相同的代理、`cc`、语言和缓存设置。
-
-### 匿名请求
-
-Steam 经常按**账号国家/地区**限制商店页面。不带会话 Cookie 的请求可能返回该 IP 对应的公开商店布局。脚本从不使用你的登录会话执行绕过请求。
-
-### 商店语言
-
-访客请求会尽可能匹配你的 Steam 商店语言：
-
-1. 当前页面的 `Steam_Language` Cookie
-2. 否则使用由界面/浏览器区域设置推导出的语言
-3. 以 `?l=…`、`Cookie: Steam_Language=…` 和 `Accept-Language` 的形式应用
-
-### 代理网关
-
-用户脚本管理器**无法**为 `GM_xmlhttpRequest` 附加系统 SOCKS/HTTP 代理。当封锁基于 IP 时，请在面板中将请求指向一个本地或远程 **HTTP 网关**，由它从其他网络获取 Steam URL。
-
-| 模式 | 请求示例 |
-|------|-----------------|
-| `host:port/https://…` | `http://127.0.0.1:8765/https://store.steampowered.com/app/412020/` |
-| `host:port/store.steampowered.com/…` | `http://127.0.0.1:8765/store.steampowered.com/app/412020/` |
-| `host:port/?url=…` | `http://127.0.0.1:8765/?url=https%3A%2F%2Fstore.steampowered.com%2Fapp%2F412020%2F` |
-
-本仓库包含一个可选的 Node 网关：[`proxy-gateway.mjs`](proxy-gateway.mjs)。
-
-```bash
-npm install
-npm run gateway
-
-# with upstream SOCKS/HTTP:
-# UPSTREAM_PROXY=socks5://user:pass@host:1080 npm run gateway
-```
-
-然后在用户脚本面板中设置：主机 `127.0.0.1`、端口 `8765`、模式 `host:port/https://…`、代理**开启**。
-
-## 仓库结构
-
-```text
-steam-region-block-bypass/
-├── src/
-│   ├── main.js                 # 语言区域 + bootDocument + region:rewrote 处理程序
-│   ├── core/                   # 设置、缓存、已封锁应用、总线、常量、调试
-│   ├── region/                 # 检测、请求、移植、队列、修正、绕过
-│   ├── features/search/        # 建议 API/解析/渲染/页头、/search 页面、探测
-│   ├── features/settings/      # 面板、控件、确认、页面
-│   ├── i18n/                   # 语言区域元数据 + 十个语言文件
-│   ├── ui/                     # toast 通知
-│   ├── utils/                  # dom、html、pool、导航、滚动锁定
-│   └── styles/                 # tokens、base、panel、region、search、cache、toast
-├── tests/                      # Node 内置单元测试
-├── scripts/                    # 构建 / 产物辅助脚本
-├── steam-region-block-bypass.user.js   # 可安装的用户脚本（已提交产物）
-├── steam-region-block-bypass.meta.js   # 用于更新检查的元数据文件
-├── proxy-gateway.mjs           # 可选本地 HTTP 网关（Node）
-├── package.json                # 依赖、版本、脚本
-├── README.md                   # 文档和安装说明
-├── CHANGELOG.md                # 版本历史
-├── DESIGN.md                   # 视觉语言和 CSS token 规则
-├── LICENSE                     # MIT 许可证
-└── .gitattributes / .gitignore
-```
-
-| 文件 | 用途 |
-|------|---------|
-| `steam-region-block-bypass.user.js` | 通过 `@downloadURL` / `@updateURL` 提供的完整脚本 |
-| `steam-region-block-bypass.meta.js` | 轻量元数据镜像；管理器检查更新时可用它代替完整脚本 |
-| `proxy-gateway.mjs` | 用于基于 IP 的区域封锁的可选本地中继 |
-
-## 脚本元数据
-
-管理器使用的关键 `// ==UserScript==` 字段：
-
-| 字段 | 值 |
-|-------|-------|
-| `@namespace` | `https://github.com/NemoKing1210/steam-region-block-bypass` |
-| `@version` | 语义化版本（每次发布都必须提升） |
-| `@updateURL` / `@downloadURL` | `steam-region-block-bypass.user.js` 的 GitHub 原始 URL |
-| `@homepageURL` | 本仓库 |
-| `@supportURL` | GitHub Issues |
-| `@license` | MIT |
-| `@grant` | `GM_xmlhttpRequest`, `GM_getValue`, `GM_setValue`, `GM_addStyle`, `GM_registerMenuCommand` |
-| `@connect` | `store.steampowered.com`, `*`（自定义代理网关） |
-
-提供 en、ru、zh-CN、es、pt-BR、de、fr、ja、ko 和 pl 的本地化 `@name` 与 `@description` 标签。
-
-## 所需权限
-
-| 授权 | 用途 |
-|-------|---------|
-| `GM_xmlhttpRequest` | 获取商店页面，不受页面 Cookie / CORS 限制 |
-| `GM_getValue` / `GM_setValue` | 保存代理和界面设置 |
-| `GM_addStyle` | 注入 Steam 风格的面板和横幅 CSS |
-| `GM_registerMenuCommand` | 从用户脚本管理器菜单打开设置 |
-
-需要 `@connect *`，以便脚本能够访问用户配置的代理网关主机。
-
-## 开发
-
-使用 **Vite** + **vite-plugin-monkey** 构建。编辑 [`src/`](src/) 下的 ESM 模块，然后运行 `npm run build` 刷新已提交的安装产物。详情见 [DEVELOPMENT.md](DEVELOPMENT.md)、[CONTRIBUTING.md](CONTRIBUTING.md)。
-
-```bash
-npm install
-npm run dev      # 通过 Vite 提供实时 "dev:" 用户脚本
-npm run build    # 生产构建 → dist/ + 根目录 .user.js / .meta.js
-npm test         # Node 内置单元测试
-npm run ci       # 测试 + 构建 + 产物校验
-npm run gateway  # 可选的本地代理网关
-```
-
-### 本地工作流（Violentmonkey）
-
-1. 克隆本仓库并运行 `npm run build`。
-2. 在 Violentmonkey 中从本地根目录的 `steam-region-block-bypass.user.js` 安装。
-3. 在关闭安装对话框之前启用 **跟踪本地文件**。
-4. 编辑 `src/`，重新构建，重新加载 Steam 页面——或使用 `npm run dev` 进行热更新。
-
-### 本地工作流（Tampermonkey）
-
-Tampermonkey 原生不支持跟踪本地文件。可选方案：
-
-- 使用 `npm run dev` 并安装提供的 `dev:` 用户脚本，或
-- 每次 `npm run build` 后从构建文件 / URL 重新安装，或
-- 开发期间临时将 `@updateURL` / `@downloadURL` 指向 `http://localhost:...`（不要提交本地 URL）。
-
-### 配置
-
-设置通过设置面板存储在用户脚本存储中（`srbb_settings_v2`；扁平的 `srbb_settings` v1 对象会迁移一次，并保留原样以便降级）：
-
-| 设置 | 默认值 | 说明 |
-|---------|---------|-------------|
-| 界面语言 | 自动 | 面板 / 消息语言；`自动`跟随浏览器。Steam 商店语言 Cookie 在访客请求中仍然优先 |
-| 启用区域绕过 | 开 | 控制页面检测、自动/手动模式、横幅、其他站点按钮和队列恢复。访客搜索有自己的开关 |
-| 绕过触发方式 | 自动 | **自动**在区域错误页面上运行；**显示按钮**等待手动操作 |
-| 显示横幅 | 开 | 在已绕过的页面上方显示区域提示 |
-| 商店国家/地区（`cc`） | 空 | 访客请求的可选 Steam 国家/地区代码 |
-| 显示 toast 通知 | 开 | 设置更改时显示 Steam 风格浮动通知；可关闭 |
-| Toast 位置 | 右上 | toast 所在角落：上/下 × 左/右 |
-| 访客搜索建议 | 开 | **搜索**标签页：页头匿名建议 |
-| 访客 `/search` 页面 | 关 | **搜索**标签页：用匿名访客请求替换当前结果 |
-| 记住已封锁游戏 | 开 | **搜索**标签页：当 Steam 显示区域错误时保存应用 ID |
-| 在搜索中高亮封锁项 | 开 | **搜索**标签页：在访客结果中标记已保存的游戏 |
-| 在搜索中自动检测封锁 | 开 | **搜索**标签页：使用已登录会话探测结果页面；范围和并发数可配置 |
-| 缓存时长（分钟） | `60` | **缓存**标签页：在此时间内复用成功的访客页面；`0` 禁用缓存。横幅**重新加载**始终获取最新数据 |
-| 最大缓存页面数 | `30` | **缓存**标签页：保留最新的访客 HTML 条目（10 MB 用量指示为软预算） |
-| 缓存应用 / 搜索页面 | 开 / 开 | **缓存**标签页：存储哪些类型的访客 HTML；关闭后停止写入并清理该类型 |
-| 使用代理网关 | 关 | 通过网关路由匿名请求 |
-| 网关模式 | `gateway` | 目标 URL 如何追加到 `host:port` |
-| 主机 / 端口 | 空 | 网关地址（例如 `127.0.0.1` / `8765`） |
-| 用户名 / 密码 | 空 | 网关的可选 HTTP Basic 认证 |
-
-设置写入 `srbb_settings_v2`。页面缓存保留现有的 `srbb_page_cache` 键，封锁记录保留 `srbb_blocked_apps`。
+| 用户脚本 | 功能 |
+|:-----------|:-------------|
+| [![Steam Plus](https://img.shields.io/badge/Steam_Plus-1b2838?style=flat-square&logo=steam&logoColor=66c0f4)](https://github.com/NemoKing1210/steam-plus) | 为 Steam 商店和 Steam 社区内容提供完整的设置面板和页面翻译——游戏描述、评测、个人资料评论、新闻和指南 |
+| [![Steam GameStatus](https://img.shields.io/badge/Steam_GameStatus-1b2838?style=flat-square&logo=steam&logoColor=66c0f4)](https://github.com/NemoKing1210/steam-gamestatus) | 为 Steam 添加 [GameStatus.info](https://gamestatus.info) 数据——游戏卡片和页面上的保护状态、发行日期、评分和硬件规格 |
 
 ## 免责声明
 

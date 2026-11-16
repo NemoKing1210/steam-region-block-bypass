@@ -11,7 +11,7 @@ Built with [Vite](https://vitejs.dev/) + [vite-plugin-monkey](https://github.com
 - **Source:** `src/main.js`
 - **Canonical install artifacts (committed):** `steam-region-block-bypass.user.js`, `steam-region-block-bypass.meta.js`
 - **Version source of truth:** `package.json` `version` (userscript header + `SCRIPT_VERSION`)
-- **Docs:** `README.md`, `CHANGELOG.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`, `DESIGN.md`
+- **Docs:** `README.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `DESIGN.md`
 - **License:** MIT
 
 Not affiliated with Valve/Steam. Do not add purchase, activation, or account-login bypass logic. Scope is **viewing** store HTML that Steam already serves to anonymous visitors.
@@ -44,9 +44,12 @@ steam-region-block-bypass/
 ├── proxy-gateway.mjs
 ├── package.json
 ├── vite.config.js
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── DEVELOPMENT.md
+│   └── screenshots/
 ├── README.md
 ├── CHANGELOG.md
-├── DEVELOPMENT.md
 ├── CONTRIBUTING.md
 ├── DESIGN.md
 ├── AGENTS.md
@@ -84,7 +87,10 @@ UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback 
 - Add or update focused tests under `tests/` for pure logic; `npm run ci` runs tests, build, and artifact verification.
 - Production builds minify JS/CSS; edit `src/` for readable code.
 - **Always bump** `package.json` `version` when shipping user-visible changes.
-- **Keep README.md in sync** with features, settings, install flow, and architecture.
+- **Keep README.md in sync** with features, install flow, and user-facing
+  settings. Technical reference (how it works, repository layout, metadata,
+  permissions, full settings table) lives in `docs/ARCHITECTURE.md`; keep that file
+  up to date instead of expanding the README.
   Translated READMEs (`README.ru.md`, `README.zh-CN.md`, `README.es.md`,
   `README.pt-BR.md`, `README.de.md`, `README.fr.md`, `README.ja.md`,
   `README.ko.md`, `README.pl.md`) must be updated in the same PR; keep the

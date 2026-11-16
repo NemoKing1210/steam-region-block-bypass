@@ -59,35 +59,20 @@ Wklej [adres URL instalacji](#szybka-instalacja) podany powyżej.
 
 ## Aktualizacje
 
-Skrypt zawiera metadane `@updateURL` i `@downloadURL` wskazujące na surowy plik GitHub. Obsługiwane menedżery automatycznie sprawdzają aktualizacje (Tampermonkey: panel → interwał sprawdzania; Violentmonkey: podobnie).
-
-**Aby wydać nową wersję:**
-
-1. Zwiększ `version` w `package.json` (SemVer).
-2. Uruchom `npm run build` (odświeża główne `.user.js` / `.meta.js`).
-3. Dodaj wpis w [`CHANGELOG.md`](CHANGELOG.md).
-4. Wypchnij do `main` (lub utwórz GitHub Release).
-
-Menedżery porównują zainstalowaną `@version` z metadanymi zdalnymi, aby zdecydować, czy zaproponować aktualizację. Pełny proces opisano w [DEVELOPMENT.md](DEVELOPMENT.md).
+Skrypt dostarcza metadane `@updateURL` i `@downloadURL` wskazujące na surowy plik GitHub, więc obsługiwane menedżery automatycznie sprawdzają aktualizacje. Kroki wydania opisano w [DEVELOPMENT.md](docs/DEVELOPMENT.md#releasing).
 
 ## Funkcje
 
-- **Wstrzykiwanie z priorytetem przenoszenia** — podmienia układ gry gościa w aktywnym `#responsive_page_template_content`, zachowując nagłówek zalogowanej sesji, globalne zmienne sesji oraz załadowane style i skrypty; `document.write` pozostaje awaryjnym trybem pełnego przepisania
-- **Przywracanie kolejki dla zalogowanych** — odtwarza kontrolki listy życzeń, obserwowania i ignorowania po przeniesieniu oraz wysyła akcje przez aktywną sesję
-- **Automatyczne obejście lub przycisk** — uruchamia się natychmiast na zablokowanych stronach albo najpierw pokazuje ręczną propozycję
-- **Anonimowe żądanie** — używa `GM_xmlhttpRequest` z `anonymous: true` (bez ciasteczek logowania)
-- **Język sklepu** — żądanie gościa używa `Steam_Language`, `?l=` i `Accept-Language`, aby strona odpowiadała językowi interfejsu Steam
-- **Ciasteczka weryfikacji wieku** — wysyła ciasteczka `birthtime` / treści dla dorosłych, aby strony gościa rzadziej zatrzymywały się na weryfikacji wieku
-- **Opcjonalny kraj sklepu (`cc`)** — nadpisuje kraj sklepu Steam dla żądania gościa
-- **Panel bramki proxy** — włącz/wyłącz, host, port, nazwa użytkownika, hasło, tryb URL
-- **Główny przełącznik regionu + sterowanie banerem** — wyłącza obejście stron bez wpływu na wyszukiwanie gościa; ukrywa baner regionu, gdy to potrzebne
-- **Interfejs w stylu Steam** — pozycja ustawień w menu konta (`#account_dropdown`, styl SteamDB); przycisk awaryjny dla wylogowanych w `#global_actions`; panel listy na stronie głównej z zakładkami Ogólne / Szukaj / Cache / Proxy / O skrypcie, edycją szkicu, Resetuj, Anuluj, Zapisz i Zapisz i przeładuj
-- **Zlokalizowany interfejs** — panel i komunikaty w en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl; selektor języka interfejsu z automatycznym wykrywaniem przeglądarki
-- **Sterowanie ręczne** — ponowne wczytanie wstrzykniętej treści, otwieranie ustawień z banera lub menu menedżera skryptów
-- **Podpowiedzi wyszukiwania gościa** — domyślnie włączone: anonimowa lista podpowiedzi przez ten sam stos żądań gościa (proxy / `cc` / cache); wyłącz w **Region Bypass → Szukaj**
-- **Strona gościa `/search`** — opcjonalna: anonimowe ponowne pobranie i wstrzyknięcie dla `store.steampowered.com/search` (ten sam stos); włącz osobno w **Region Bypass → Szukaj**
-- **Zakładka Cache** — wskaźnik użycia, TTL i maksymalna liczba wpisów, wybór typów stron gościa do przechowywania, przeglądanie/usuwanie zbuforowanego HTML, przeglądanie/czyszczenie listy zablokowanych gier
-- **Rejestr zablokowanych gier** — zapamiętuje identyfikatory aplikacji zablokowanych regionalnie (przełączniki na zakładce Szukaj) i wyróżnia je w wyszukiwaniu gościa; lista i czyszczenie na zakładce **Cache**
+- **Przywraca zablokowane regionalnie strony aplikacji** — anonimowe ponowne pobranie gościa, a następnie przeniesienie prawdziwego układu sklepu do aktywnego dokumentu (pełne przepisanie dokumentu tylko jako rozwiązanie awaryjne)
+- **Zachowuje sesję bez zmian** — kontrolki listy życzeń, obserwowania i ignorowania dla zalogowanych użytkowników nadal działają po przeniesieniu
+- **Automatyczne obejście lub ręczna propozycja** — natychmiastowe uruchomienie na zablokowanych stronach albo najpierw wyświetlenie propozycji
+- **Podpowiedzi wyszukiwania gościa** — domyślnie włączone: anonimowe podpowiedzi w nagłówku sklepu, z wyróżnionymi zapisanymi zablokowanymi grami
+- **Strona gościa `/search`** — opcjonalne anonimowe ponowne pobranie i wstrzyknięcie wyników wyszukiwania
+- **Rejestr zablokowanych gier** — zapamiętuje regionalnie zablokowane identyfikatory aplikacji i potrafi wykrywać je automatycznie podczas sondowania wyników wyszukiwania
+- **Sterowanie cache** — wskaźnik użycia, TTL i limit wpisów, przełączniki dla poszczególnych źródeł oraz przeglądarka zbuforowanych stron
+- **Bramka proxy** — opcjonalny przekaźnik HTTP dla blokad opartych na IP ([konfiguracja](docs/ARCHITECTURE.md#proxy-gateway))
+- **Panel ustawień w stylu Steam** — zakładki Ogólne / Szukaj / Cache / Proxy / O skrypcie, edycja szkicu, Zapisz oraz Zapisz i przeładuj
+- **10 języków interfejsu** — angielski, rosyjski, chiński, hiszpański, portugalski (Brazylia), niemiecki, francuski, japoński, koreański, polski
 
 ## Obsługiwane strony
 
@@ -96,204 +81,27 @@ Menedżery porównują zainstalowaną `@version` z metadanymi zdalnymi, aby zdec
 | Sklep Steam (aplikacje) | `https://store.steampowered.com/app/{id}/…` | Obejście błędu regionu (główne zastosowanie) |
 | Sklep Steam (wyszukiwanie) | Wyszukiwanie w nagłówku + `https://store.steampowered.com/search/?term=…` | **Podpowiedzi wyszukiwania gościa** i opcjonalna **strona gościa /search** w Region Bypass → Szukaj |
 
-Strony aplikacji działają, gdy Steam wyświetla **„This item is currently unavailable in your region”** (ten przedmiot nie jest obecnie dostępny w Twoim regionie) — na przykład **Call of Duty: Modern Warfare 4** w ograniczonych regionach. **Podpowiedzi wyszukiwania gościa** są domyślnie włączone dla paska wyszukiwania w nagłówku. Ponowne pobranie gościa dla pełnej strony `/search` jest **domyślnie wyłączone** (ten sam anonimowy stos żądań gościa: proxy / `cc` / cache) — włącz je w **Region Bypass → Szukaj**. Zapisane identyfikatory zablokowanych aplikacji można wyróżniać w wynikach wyszukiwania.
+Strony aplikacji działają, gdy Steam wyświetla **„This item is currently unavailable in your region”** (ten przedmiot nie jest obecnie dostępny w Twoim regionie) — na przykład **Call of Duty: Modern Warfare 4** w ograniczonych regionach. Podpowiedzi wyszukiwania gościa są domyślnie włączone dla paska wyszukiwania w nagłówku; strona gościa `/search` jest opcjonalna w **Region Bypass → Szukaj**. Oba rozwiązania korzystają z tego samego anonimowego stosu żądań (proxy / `cc` / cache). Zapisane identyfikatory zablokowanych aplikacji można wyróżniać w wynikach wyszukiwania.
 
-## Jak to działa
+## Dla deweloperów
 
-```
-Ładowanie strony aplikacji Steam
-       │
-       ▼
-Czy #error_box / Oops pasuje do „unavailable in your region”?
-       │
-       ├── nie ──► bezczynność (przycisk ustawień nadal dostępny)
-       │
-       └── tak ──► Zbuduj docelowy URL (?l= język, opcjonalnie ?cc=)
-                │
-                ▼
-       Trafienie w cache (w TTL)? ── tak ──► użyj zapisanego HTML gościa
-                │ nie
-                ▼
-       Opcjonalnie: przepisz URL przez bramkę proxy
-                │
-                ▼
-       GM_xmlhttpRequest(anonymous: true,
-         Cookie: birthtime…; Steam_Language=…)
-                │
-                ▼
-       Parsuj HTML → wyodrębnij .game_page_background / #tabletGrid
-                │
-                ├── nadal zablokowane? ──► pokaż błąd + zaproponuj proxy
-                │
-                ├── przenieś do aktywnej powłoki
-                │   ├── zsynchronizuj title, klasy, style, skrypty
-                │   ├── przywróć kontrolki kolejki zalogowanego użytkownika
-                │   └── błąd → awaryjny document.write(HTML gościa)
-                │
-                └── baner + ponowny start funkcji (udany HTML zapisany w cache)
-```
+Ta sekcja została przeniesiona do osobnych przewodników:
 
-### Wyszukiwanie gościa
+- [DEVELOPMENT.md](docs/DEVELOPMENT.md) — budowanie, testowanie lokalne, wydawanie, bramka
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — jak działa obejście, struktura repozytorium, metadane, uprawnienia, dokumentacja ustawień
+- [CONTRIBUTING.md](CONTRIBUTING.md) — przepływ pracy współtwórcy i lista kontrolna PR
+- [AGENTS.md](AGENTS.md) — instrukcje dla agentów kodowania AI
+- [SECURITY.md](SECURITY.md) — polityka bezpieczeństwa i prywatne zgłaszanie
+- [DESIGN.md](DESIGN.md) — język wizualny i reguły tokenów CSS
 
-W panelu Region Bypass (**zakładka Szukaj**):
+## Inne userskrypty
 
-1. **Podpowiedzi wyszukiwania gościa** (domyślnie włączone) — wpisywanie w wyszukiwarce nagłówka sklepu pobiera anonimowe podpowiedzi z `/search/results` (do 25 gier), wzbogacane danymi `/api/storesearch/`, gdy są dostępne (awaryjnie: `/search/suggest`).
-2. **Strona gościa `/search`** (domyślnie wyłączona) — wysłanie wyszukiwania lub otwarcie `/search/?term=…` może ponownie pobrać wyniki jako gość i wstrzyknąć je do strony, gdy to ustawienie jest włączone.
-3. Opcjonalny **rejestr zablokowanych gier** wyróżnia aplikacje, które wcześniej otworzyłeś na stronie z błędem regionu.
-4. **Automatyczne wykrywanie blokad w wyszukiwaniu** (domyślnie włączone) sprawdza każdy wynik za pomocą ciasteczek zalogowanej sesji Steam i dodaje aplikacje z blokadą regionalną do listy (pasek postępu + wskaźniki ładowania dla każdego elementu; zakres i współbieżność konfigurowalne).
+Inne userskrypty tego samego autora:
 
-Używa tych samych ustawień proxy, `cc`, języka i cache co obejście stron aplikacji.
-
-### Anonimowe żądanie
-
-Steam często ogranicza stronę sklepu według **kraju konta**. Uprzywilejowane żądanie bez ciasteczek sesji może zwrócić publiczny układ sklepu dla danego IP. Skrypt nigdy nie używa Twojej zalogowanej sesji do żądania obejścia.
-
-### Język sklepu
-
-Żądanie gościa odzwierciedla język Twojego sklepu Steam, gdy to możliwe:
-
-1. Ciasteczko `Steam_Language` z bieżącej strony
-2. W przeciwnym razie język wywiedziony z ustawień regionalnych interfejsu/przeglądarki
-3. Stosowane jako `?l=…`, `Cookie: Steam_Language=…` i `Accept-Language`
-
-### Bramka proxy
-
-Menedżery skryptów użytkownika **nie mogą** dołączyć systemowego proxy SOCKS/HTTP do `GM_xmlhttpRequest`. Gdy blokada jest oparta na IP, wskaż w panelu lokalną lub zdalną **bramkę HTTP**, która pobiera URL Steam z innej sieci.
-
-| Tryb | Przykładowe żądanie |
-|------|-----------------|
-| `host:port/https://…` | `http://127.0.0.1:8765/https://store.steampowered.com/app/412020/` |
-| `host:port/store.steampowered.com/…` | `http://127.0.0.1:8765/store.steampowered.com/app/412020/` |
-| `host:port/?url=…` | `http://127.0.0.1:8765/?url=https%3A%2F%2Fstore.steampowered.com%2Fapp%2F412020%2F` |
-
-To repozytorium zawiera opcjonalną bramkę Node: [`proxy-gateway.mjs`](proxy-gateway.mjs).
-
-```bash
-npm install
-npm run gateway
-
-# with upstream SOCKS/HTTP:
-# UPSTREAM_PROXY=socks5://user:pass@host:1080 npm run gateway
-```
-
-Następnie w panelu userscriptu: Host `127.0.0.1`, Port `8765`, tryb `host:port/https://…`, proxy **WŁ**.
-
-## Struktura repozytorium
-
-```text
-steam-region-block-bypass/
-├── src/
-│   ├── main.js                 # lokalizacja + bootDocument + handler region:rewrote
-│   ├── core/                   # ustawienia, cache, zablokowane aplikacje, bus, stałe, debug
-│   ├── region/                 # wykrywanie, żądanie, przenoszenie, kolejka, poprawki, obejście
-│   ├── features/search/        # API/parsowanie/render podpowiedzi, strona /search, sondowanie
-│   ├── features/settings/      # panel, kontrolki, potwierdzenie, strony
-│   ├── i18n/                   # metadane lokalizacji + dziesięć plików językowych
-│   ├── ui/                     # powiadomienia toast
-│   ├── utils/                  # dom, html, pool, nawigacja, blokada przewijania
-│   └── styles/                 # tokens, base, panel, region, search, cache, toast
-├── tests/                      # Wbudowane testy jednostkowe Node
-├── scripts/                    # pomocniki budowania / weryfikacji artefaktów
-├── steam-region-block-bypass.user.js   # Instalowalny userscript (artefakt w repozytorium)
-├── steam-region-block-bypass.meta.js   # Metadane do sprawdzania aktualizacji
-├── proxy-gateway.mjs           # Opcjonalna lokalna bramka HTTP (Node)
-├── package.json                # Zależności, wersja, skrypty
-├── README.md                   # Dokumentacja i instrukcje instalacji
-├── CHANGELOG.md                # Historia wersji
-├── DESIGN.md                   # Język wizualny i reguły tokenów CSS
-├── LICENSE                     # Licencja MIT
-└── .gitattributes / .gitignore
-```
-
-| Plik | Przeznaczenie |
-|------|---------|
-| `steam-region-block-bypass.user.js` | Pełny skrypt serwowany pod `@downloadURL` / `@updateURL` |
-| `steam-region-block-bypass.meta.js` | Lekkie lustro metadanych; menedżery mogą pobierać je zamiast pełnego skryptu podczas sprawdzania aktualizacji |
-| `proxy-gateway.mjs` | Opcjonalny lokalny przekaźnik dla blokad regionalnych opartych na IP |
-
-## Metadane skryptu
-
-Kluczowe pola `// ==UserScript==` używane przez menedżery:
-
-| Pole | Wartość |
-|-------|-------|
-| `@namespace` | `https://github.com/NemoKing1210/steam-region-block-bypass` |
-| `@version` | Wersja semantyczna (musi być zwiększana przy każdym wydaniu) |
-| `@updateURL` / `@downloadURL` | Surowy URL GitHub pliku `steam-region-block-bypass.user.js` |
-| `@homepageURL` | To repozytorium |
-| `@supportURL` | GitHub Issues |
-| `@license` | MIT |
-| `@grant` | `GM_xmlhttpRequest`, `GM_getValue`, `GM_setValue`, `GM_addStyle`, `GM_registerMenuCommand` |
-| `@connect` | `store.steampowered.com`, `*` (niestandardowe bramki proxy) |
-
-Zlokalizowane znaczniki `@name` i `@description` są dostępne dla en, ru, zh-CN, es, pt-BR, de, fr, ja, ko i pl.
-
-## Wymagane uprawnienia
-
-| Uprawnienie | Przeznaczenie |
-|-------|---------|
-| `GM_xmlhttpRequest` | Pobieranie strony sklepu bez ciasteczek strony / limitów CORS |
-| `GM_getValue` / `GM_setValue` | Zapisywanie ustawień proxy i interfejsu |
-| `GM_addStyle` | Wstrzykiwanie CSS panelu i banera w stylu Steam |
-| `GM_registerMenuCommand` | Otwieranie ustawień z menu menedżera skryptów |
-
-`@connect *` jest wymagane, aby skrypt mógł wywołać skonfigurowany przez użytkownika host bramki proxy.
-
-## Rozwój
-
-Zbudowany z **Vite** + **vite-plugin-monkey**. Edytuj moduły ESM w [`src/`](src/), a następnie uruchom `npm run build`, aby odświeżyć zatwierdzone artefakty instalacyjne. Szczegóły: [DEVELOPMENT.md](DEVELOPMENT.md), [CONTRIBUTING.md](CONTRIBUTING.md).
-
-```bash
-npm install
-npm run dev      # działający userscript "dev:" przez Vite
-npm run build    # produkcja → dist/ + główne .user.js / .meta.js
-npm test         # wbudowane testy jednostkowe Node
-npm run ci       # testy + build + weryfikacja artefaktów
-npm run gateway  # opcjonalna lokalna bramka proxy
-```
-
-### Lokalny przepływ pracy (Violentmonkey)
-
-1. Sklonuj to repozytorium i uruchom `npm run build`.
-2. W Violentmonkey zainstaluj z lokalnego głównego `steam-region-block-bypass.user.js`.
-3. Włącz **Śledź plik lokalny** przed zamknięciem okna instalacji.
-4. Edytuj `src/`, przebuduj, odśwież stronę Steam — lub użyj `npm run dev` dla HMR.
-
-### Lokalny przepływ pracy (Tampermonkey)
-
-Tampermonkey nie śledzi plików lokalnych natywnie. Opcje:
-
-- Użyj `npm run dev` i zainstaluj serwowany userscript `dev:`, albo
-- Zainstaluj ponownie z zbudowanego pliku / URL po każdym `npm run build`, albo
-- Tymczasowo ustaw `@updateURL` / `@downloadURL` na `http://localhost:...` podczas rozwoju (nie zatwierdzaj lokalnych URL).
-
-### Konfiguracja
-
-Ustawienia są przechowywane w magazynie userscriptu (`srbb_settings_v2`; płaski obiekt `srbb_settings` v1 jest jednorazowo migrowany i pozostawiany bez zmian na wypadek downgrade) przez panel ustawień:
-
-| Ustawienie | Domyślnie | Opis |
-|---------|---------|-------------|
-| Język interfejsu | Auto | Język panelu / komunikatów; `Auto` podąża za przeglądarką. Ciasteczko języka sklepu Steam nadal ma priorytet w żądaniach gościa |
-| Włącz obejście regionu | wł. | Steruje wykrywaniem stron, trybem auto/ręcznym, banerem, przyciskiem na innych stronach i przywracaniem kolejki. Wyszukiwanie gościa ma własne przełączniki |
-| Wyzwalacz obejścia | Auto | **Auto** uruchamia się na stronach z błędem regionu; **Pokaż przycisk** czeka na ręczną akcję |
-| Pokaż baner | wł. | Pokazuje powiadomienie o regionie nad obejściem strony |
-| Kraj sklepu (`cc`) | puste | Opcjonalny kod kraju Steam dla żądań gościa |
-| Pokazuj powiadomienia toast | wł. | Pływające powiadomienia w stylu Steam przy zmianie ustawień; można wyłączyć |
-| Pozycja toast | Prawy górny róg | Róg powiadomień toast: góra/dół × lewo/prawo |
-| Podpowiedzi wyszukiwania gościa | wł. | Zakładka **Szukaj**: anonimowe podpowiedzi w nagłówku |
-| Strona gościa `/search` | wył. | Zakładka **Szukaj**: zastąp aktywne wyniki anonimowym żądaniem gościa |
-| Pamiętaj zablokowane gry | wł. | Zakładka **Szukaj**: zapisuj identyfikatory aplikacji, gdy Steam pokazuje błąd regionu |
-| Wyróżniaj zablokowane w wyszukiwaniu | wł. | Zakładka **Szukaj**: oznaczaj zapisane gry w wynikach gościa |
-| Automatycznie wykrywaj blokady w wyszukiwaniu | wł. | Zakładka **Szukaj**: sprawdzaj strony wyników za pomocą zalogowanej sesji; zakres i współbieżność konfigurowalne |
-| Czas trwania cache (minuty) | `60` | Zakładka **Cache**: używaj ponownie udanej strony gościa przez ten czas; `0` wyłącza cache. **Przeładuj** w banerze zawsze pobiera świeże dane |
-| Maks. stron w cache | `30` | Zakładka **Cache**: najnowsze wpisy HTML gościa, które są zachowywane (miękki budżet wskaźnika 10 MB) |
-| Cache stron aplikacji / wyszukiwania | wł. / wł. | Zakładka **Cache**: które rodzaje HTML gościa przechowywać; wyłączenie zatrzymuje zapisy i usuwa dany rodzaj |
-| Używaj bramki proxy | wył. | Kieruj anonimowe żądanie przez bramkę |
-| Tryb bramki | `gateway` | Jak docelowy URL jest dołączany do `host:port` |
-| Host / Port | puste | Adres bramki (np. `127.0.0.1` / `8765`) |
-| Nazwa użytkownika / Hasło | puste | Opcjonalne uwierzytelnianie HTTP Basic dla bramki |
-
-Ustawienia są zapisywane w `srbb_settings_v2`. Cache stron zachowuje istniejący klucz `srbb_page_cache`, a rejestr zablokowanych — `srbb_blocked_apps`.
+| Userscript | Co robi |
+|:-----------|:-------------|
+| [![Steam Plus](https://img.shields.io/badge/Steam_Plus-1b2838?style=flat-square&logo=steam&logoColor=66c0f4)](https://github.com/NemoKing1210/steam-plus) | Pełny panel ustawień i tłumaczenie na stronie dla treści Steam Store i Steam Community — opisy gier, recenzje, komentarze profilu, aktualności i poradniki |
+| [![Steam GameStatus](https://img.shields.io/badge/Steam_GameStatus-1b2838?style=flat-square&logo=steam&logoColor=66c0f4)](https://github.com/NemoKing1210/steam-gamestatus) | Dodaje dane [GameStatus.info](https://gamestatus.info) do Steam — ochronę, daty wydania, oceny i specyfikację sprzętową na kartach i stronach gier |
 
 ## Zastrzeżenie
 

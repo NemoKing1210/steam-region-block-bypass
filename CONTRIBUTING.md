@@ -10,8 +10,8 @@ Thanks for your interest in improving Steam Region Block Bypass.
 
 ## Before you start
 
-1. Read [DEVELOPMENT.md](DEVELOPMENT.md) for setup, scripts, and release notes.
-2. Skim [AGENTS.md](AGENTS.md) for architecture and project conventions.
+1. Read [DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup, scripts, and release notes.
+2. Skim [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [AGENTS.md](AGENTS.md) for how the script works and project conventions.
 3. Check [README.md](README.md), [CHANGELOG.md](CHANGELOG.md), and open issues/PRs to avoid duplicate work.
 
 ## Development setup
@@ -37,7 +37,8 @@ Edit source under `src/` (and `vite.config.js` for userscript metadata). Do **no
 5. For user-visible changes:
    - Bump `version` in `package.json` (SemVer: patch for fixes, minor for features)
    - Add a [Keep a Changelog](https://keepachangelog.com/) entry in `CHANGELOG.md`
-   - Update [README.md](README.md) if features, settings, install flow, or FAQ changed — and the corresponding `README.<locale>.md` translations
+   - Update [README.md](README.md) and the corresponding `README.<locale>.md` translations if features or install flow changed
+   - Update [ARCHITECTURE.md](docs/ARCHITECTURE.md) for technical details, metadata, permissions, or settings changes
 
 ### What CI checks
 
