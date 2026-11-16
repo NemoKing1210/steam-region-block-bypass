@@ -11,7 +11,7 @@ Built with [Vite](https://vitejs.dev/) + [vite-plugin-monkey](https://github.com
 - **Source:** `src/main.js`
 - **Canonical install artifacts (committed):** `steam-region-block-bypass.user.js`, `steam-region-block-bypass.meta.js`
 - **Version source of truth:** `package.json` `version` (userscript header + `SCRIPT_VERSION`)
-- **Docs:** `README.md`, `CHANGELOG.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`
+- **Docs:** `README.md`, `CHANGELOG.md`, `DEVELOPMENT.md`, `CONTRIBUTING.md`, `DESIGN.md`
 - **License:** MIT
 
 Not affiliated with Valve/Steam. Do not add purchase, activation, or account-login bypass logic. Scope is **viewing** store HTML that Steam already serves to anonymous visitors.
@@ -23,21 +23,16 @@ Edit source under `src/`, then run `npm run build` to refresh the root install f
 ```text
 steam-region-block-bypass/
 ├── src/
-│   ├── main.js              # Bootstrap / init
-│   ├── constants.js         # Keys, DEFAULT_SETTINGS, lang maps, REGION_PATTERNS
-│   ├── state.js             # Mutable runtime bag (settings, search tokens, caches)
-│   ├── settings.js          # load/save/migrate settings
-│   ├── cache.js             # srbb_page_cache + Cache tab meter/stats
-│   ├── blocked-apps.js      # srbb_blocked_apps registry
-│   ├── gm.js                # anonymous + session GM_xmlhttpRequest
-│   ├── detect.js            # region-block detection, host login
-│   ├── url.js               # buildTargetUrl / proxy URL helpers
-│   ├── bypass.js            # bypassRegionBlock orchestrator
-│   ├── inject.js            # DOM inject pipeline
-│   ├── i18n/                # MESSAGES + locale / Steam lang helpers
-│   ├── utils/               # html, pool
-│   ├── styles/              # CSS (injected via vite-plugin-monkey)
-│   └── features/            # panel, panel-cache, feedback, suggest, search-page, probe, toast
+│   ├── main.js              # Locale, bootDocument, region:rewrote handler
+│   ├── core/                # constants, settings model/storage, bus, debug, cache, blocked apps
+│   ├── region/              # urls, detect, request, transplant, inject, queue, fixups, bypass, lifecycle
+│   ├── features/search/     # URLs, parse/appdetails, API, render, suggest DOM/header, guest page/state, probe
+│   ├── features/settings/   # panel, controls, confirm, pages/*
+│   ├── i18n/                # meta, locale index, ten locale files
+│   ├── ui/                  # toasts
+│   ├── utils/               # dom, html, pool, navigation, scrollLock
+│   └── styles/              # tokens, base, panel, region, search, cache, toast, index
+├── tests/                   # Node built-in unit tests
 ├── scripts/
 │   ├── copy-dist.mjs
 │   ├── verify-artifacts.mjs
@@ -53,6 +48,7 @@ steam-region-block-bypass/
 ├── CHANGELOG.md
 ├── DEVELOPMENT.md
 ├── CONTRIBUTING.md
+├── DESIGN.md
 ├── AGENTS.md
 └── CLAUDE.md
 ```
@@ -61,27 +57,31 @@ steam-region-block-bypass/
 
 1. Match `https://store.steampowered.com/*` at `document-idle`.
 2. Detect region error (`#error_box` / Oops shell + `REGION_PATTERNS`).
-3. `buildTargetUrl()` — strip `snr`, set `?l=` from `getSteamStoreLanguage()`, optional `?cc=`.
+3. `buildTargetUrl(sourceUrl, { lang, cc })` — strip `snr`, set `?l=`, optional `?cc=` (callers resolve settings/cookies).
 4. Optional proxy rewrite via `buildRequestUrl()`.
 5. Anonymous `GM_xmlhttpRequest` with age-gate + `Steam_Language` cookies (`buildRequestHeaders()`).
-6. Parse HTML → `extractGamePageRoot()` → `injectDirect()` (clear Oops shell, load missing app CSS/JS, re-run guest inline scripts, banner).
-7. Guest search: header suggest + optional `/search` page refetch; blocked-app registry + account probes.
+6. Parse HTML → `extractStoreRoot()` → `transplantGuestContent()` (live-document swap, head styles, missing bundles, inline scripts). On failure, `rewriteDocumentWithGuest()` is the only full-document fallback.
+7. Signed-in app pages: `restoreQueueActions()` rebuilds wishlist/follow/ignore controls; `applyGuestFixups()` restores tag editing/fitting and app stylesheets.
+8. Emit `region:rewrote`; `main.js` waits for boot on rewrite, boots features, inserts the banner, then emits `region:injected`.
+9. Guest search: header suggest + optional `/search` page refetch; blocked-app registry + signed-in probes. Behaviour and endpoints must stay identical to 1.x.
 
-Settings key: `srbb_settings`. Page cache: `srbb_page_cache`. Blocked apps: `srbb_blocked_apps`.
+Settings key: `srbb_settings_v2` (one-time migration from flat `srbb_settings`). Page cache: `srbb_page_cache`. Blocked apps: `srbb_blocked_apps`. There is no global mutable state bag: feature state is module-local, cross-feature reactions use `core/bus.js`.
 
-UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback in `#global_actions`), centered modal panel `#srbb-panel` over `#srbb-panel-overlay` with tabs General / Cache / Search / Proxy / About. Cache tab UI lives in `features/panel-cache.js` (meter/list builders in `cache.js`). Prefix classes/ids with `srbb-`.
+UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback in `#global_actions`), home-list panel `#srbb-panel` over `#srbb-panel-overlay` with General / Search / Cache / Proxy / About pages, draft editing, and Reset / Cancel / Save / Save & reload. Prefix classes/ids with `srbb-`.
 
 ## Conventions
 
 - Vanilla JS ESM modules under `src/`; no frameworks. Import GM APIs from `$` (`vite-plugin-monkey` client).
-- Mutable runtime state lives in `state.js` (`state.settings`, search tokens, etc.).
-- Prefer existing patterns: constants in `constants.js`, strings in `i18n/`, DOM features in `features/`.
-- Direct DOM inject only — do not reintroduce iframe/blob insert mode unless explicitly requested.
+- Mutable runtime state is module-local; cross-feature reactions use `core/bus.js` events (`settings:*`, `region:rewrote`, `region:injected`).
+- Prefer existing patterns: constants in `core/constants.js`, pure models for testable logic, strings in `i18n/locales/`, DOM features in `features/`, shared helpers in `utils/`.
+- Transplant into the live document first, keeping the full-document rewrite fallback. Do not reintroduce iframe/blob insert mode.
 - Guest requests must stay **anonymous** (no session cookies). Only age-gate / language / optional country cookies in the Cookie header.
-- When adding UI strings: update **all** locales in `src/i18n/translations.js` and keep localized `@name` / `@description` in `vite.config.js` aligned when metadata changes.
+- Signed-in probing may use `sessionFetch()` (`anonymous: false`, no Cookie override) for blocked detection only.
+- When adding UI strings: update **all ten** locale files in `src/i18n/locales/` with identical keys/placeholders and keep localized `@name` / `@description` in `vite.config.js` aligned when metadata changes.
 - Supported UI locales: `en`, `ru`, `zh-CN`, `es`, `pt-BR`, `de`, `fr`, `ja`, `ko`, `pl`.
 - Userscript metadata lives in `vite.config.js` — not hand-written in built files.
 - After changing source or metadata, run `npm run build` so root artifacts stay in sync.
+- Add or update focused tests under `tests/` for pure logic; `npm run ci` runs tests, build, and artifact verification.
 - Production builds minify JS/CSS; edit `src/` for readable code.
 - **Always bump** `package.json` `version` when shipping user-visible changes.
 - **Keep README.md in sync** with features, settings, install flow, and architecture.
@@ -93,7 +93,8 @@ UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback 
 npm install
 npm run dev       # Vite + monkey HMR (dev: userscript)
 npm run build     # Production → dist/ + copy to root
-npm run ci        # build + verify artifacts
+npm test          # Node built-in unit tests
+npm run ci        # tests + build + verify artifacts
 npm run gateway   # optional local proxy gateway
 # PORT=8765 UPSTREAM_PROXY=socks5://127.0.0.1:1080 npm run gateway
 ```

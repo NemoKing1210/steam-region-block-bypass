@@ -22,7 +22,8 @@ cd steam-region-block-bypass
 npm install
 npm run dev      # Vite + monkey HMR — install the "dev:" userscript
 npm run build    # Production bundle → dist/ + copy to repo root
-npm run ci       # build + verify committed artifacts match
+npm test         # Node built-in unit tests
+npm run ci       # tests + build + verify committed artifacts match
 ```
 
 Edit source under `src/` (and `vite.config.js` for userscript metadata). Do **not** hand-edit root `.user.js` / `.meta.js`.
@@ -45,10 +46,12 @@ Edit source under `src/` (and `vite.config.js` for userscript metadata). Do **no
 ## Conventions
 
 - Vanilla JS ESM modules under `src/`; no frameworks unless explicitly agreed.
-- Prefer existing patterns: constants in `constants.js`, strings in `i18n/`, UI hooks in `features/`. Mutable runtime state lives in `state.js`.
+- Prefer existing patterns: constants in `core/constants.js`, pure models for testable logic, strings in `i18n/locales/`, DOM features in `features/`, shared utilities in `utils/`.
+- Use the bus (`core/bus.js`) for cross-feature reactions. Do not add a global mutable state bag.
+- Persist settings through `core/settings.js`; normalize every value in `core/settings-model.js`.
 - Prefix DOM / storage keys with `srbb-` / `srbb_`.
 - Guest `GM_xmlhttpRequest` must stay `anonymous: true`.
-- Direct DOM inject only — no iframe insert mode unless explicitly requested.
+- Transplant into the live document first; keep the full-document rewrite fallback. Never introduce iframe/blob insert mode.
 - Do not expand `@connect` or `@grant` beyond what is needed (`vite.config.js`).
 - Do not commit localhost `@updateURL` / `@downloadURL` values.
 - Do not imply affiliation with Valve / Steam in docs or UI copy.
@@ -58,16 +61,19 @@ Edit source under `src/` (and `vite.config.js` for userscript metadata). Do **no
 
 UI locales: `en`, `ru`, `zh-CN`, `es`, `pt-BR`, `de`, `fr`, `ja`, `ko`, `pl`.
 
-- Add every new user-facing string to **all** locales in [`src/i18n/translations.js`](src/i18n/translations.js).
+- Add every new user-facing string to **all ten** locale files in [`src/i18n/locales/`](src/i18n/locales/) with identical keys and placeholders. `npm test` enforces parity and source-key coverage.
 - Keep localized `@name` / `@description` in `vite.config.js` aligned when changing the product description.
 
 ## Testing checklist
 
 When changing inject or search:
 
-- [ ] Region-blocked app page — auto-bypass injects game layout
+- [ ] Region-blocked app page, signed out — auto-bypass transplants the game layout and preserves the header
+- [ ] Region-blocked app page, signed in — transplant keeps the session; wishlist/follow/ignore work; tag modal and tag rows work
+- [ ] Full rewrite fallback (temporarily break the shell selector) still renders the page
 - [ ] Banner Reload fetches fresh (bypasses cache)
 - [ ] Guest search suggestions (header) with blocked badges
 - [ ] Optional guest `/search` page when enabled
-- [ ] Settings panel save / Save & Reload
+- [ ] Settings: every page, Reset confirmation, language switch, Save and Save & Reload
+- [ ] Both `steam-plus` and this script enabled on one page — no `srbb-` class/id collisions
 - [ ] Proxy gateway path (if testing IP locks)

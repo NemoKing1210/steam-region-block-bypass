@@ -2,11 +2,11 @@
 
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.19.0-green?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.0.0-green?style=for-the-badge)](CHANGELOG.md)
 
 A userscript for the Steam store that restores **blocked product pages** and adds optional **guest search** — anonymous search suggestions in the header, plus an opt-in guest `/search` page, without account cookies.
 
-It refetches app URLs **without account cookies** (guest view) and injects the real store layout. **Guest search suggestions** are on by default; the full **`/search` page** guest mode is off by default (enable in Region Bypass → Search). For IP-based locks, an optional **proxy gateway** can be configured from the Steam-styled settings panel (account menu → Region Bypass settings).
+It refetches app URLs **without account cookies** (guest view), transplants the real store layout into the live document, and restores signed-in wishlist/follow/ignore controls after a transplant. **Guest search suggestions** are on by default; the full **`/search` page** guest mode is off by default (enable in Region Bypass → Search). For IP-based locks, an optional **proxy gateway** can be configured from the Steam-styled settings panel (account menu → Region Bypass settings).
 
 Compatible with [Tampermonkey](https://www.tampermonkey.net/), [Violentmonkey](https://violentmonkey.github.io/), [Greasemonkey](https://www.greasespot.net/), ScriptCat, and other managers that support the `// ==UserScript==` metadata block.
 
@@ -55,15 +55,17 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 
 ## Features
 
-- **Direct DOM inject** — clears the Oops / region-error shell and inserts the real Steam game layout (`.game_page_background` / `#tabletGrid`), including app CSS/JS so store widgets keep working
+- **Transplant-first injection** — swaps the guest game layout into the live `#responsive_page_template_content`, preserving the logged-in header, session globals, loaded styles, and scripts; `document.write` remains a full-rewrite fallback
+- **Signed-in queue restore** — rebuilds wishlist, follow, and ignore controls after a transplant and posts actions through the live session
 - **Auto-bypass or button** — run immediately on blocked pages, or show a manual offer first
 - **Anonymous request** — uses `GM_xmlhttpRequest` with `anonymous: true` (no login cookies)
 - **Store language** — guest fetch uses `Steam_Language`, `?l=`, and `Accept-Language` so the page matches your Steam UI language
 - **Age-gate cookies** — sends `birthtime` / mature-content cookies so guest pages are less likely to stop at the age check
 - **Optional store country (`cc`)** — override Steam store country for the guest request
 - **Proxy gateway panel** — enable/disable, host, port, username, password, URL mode
-- **Steam-like UI** — settings entry in the account dropdown (`#account_dropdown`, SteamDB-style); logged-out fallback button in `#global_actions`; centered modal settings panel with dimmed backdrop (General / Cache / Search / Proxy / About)
-- **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl
+- **Region master switch + banner control** — disable page bypass without affecting guest search; hide the region banner when desired
+- **Steam-like UI** — settings entry in the account dropdown (`#account_dropdown`, SteamDB-style); logged-out fallback button in `#global_actions`; home-list panel with General / Search / Cache / Proxy / About pages, draft editing, Reset, Cancel, Save, and Save & reload
+- **Localized UI** — panel and messages in en, ru, zh-CN, es, pt-BR, de, fr, ja, ko, pl; interface language selector with browser auto-detection
 - **Manual controls** — reload injected content, open settings from the banner or userscript manager menu
 - **Guest search suggestions** — on by default: anonymous suggest dropdown via the same guest fetch stack (proxy / `cc` / cache); disable in **Region Bypass → Search**
 - **Guest `/search` page** — opt-in: anonymous refetch/inject for `store.steampowered.com/search` (same stack); enable separately in **Region Bypass → Search**
@@ -106,8 +108,12 @@ Steam app page loads
                 │
                 ├── still blocked? ──► show error + suggest proxy
                 │
-                └── clear Oops shell → inject layout + CSS + Steam JS + banner
-                    (successful HTML saved to cache)
+                ├── transplant into the live shell
+                │   ├── sync title, classes, styles, scripts
+                │   ├── restore signed-in queue controls
+                │   └── fail → document.write(guest HTML) fallback
+                │
+                └── banner + feature re-boot (successful HTML saved to cache)
 ```
 
 ### Guest search
@@ -159,15 +165,27 @@ Then in the userscript panel: Host `127.0.0.1`, Port `8765`, mode `host:port/htt
 
 ```text
 steam-region-block-bypass/
-├── steam-region-block-bypass.user.js   # Installable userscript (canonical distribution file)
-├── steam-region-block-bypass.meta.js   # Metadata-only companion for faster update checks
-├── proxy-gateway.mjs                   # Optional local HTTP gateway (Node)
-├── package.json                        # Gateway dependencies / npm scripts
-├── README.md                           # Documentation and install instructions
-├── CHANGELOG.md                        # Version history
-├── LICENSE                             # MIT license
-├── .gitattributes                      # GitHub linguist overrides
-└── .gitignore                          # node_modules, env files, logs
+├── src/
+│   ├── main.js                 # locale + bootDocument + region:rewrote handler
+│   ├── core/                   # settings, cache, blocked apps, bus, constants, debug
+│   ├── region/                 # detect, request, transplant, queue, fixups, bypass
+│   ├── features/search/        # suggest API/parse/render/header, /search page, probe
+│   ├── features/settings/      # panel, controls, confirm, pages
+│   ├── i18n/                   # locale meta + ten locale files
+│   ├── ui/                     # toasts
+│   ├── utils/                  # dom, html, pool, navigation, scroll lock
+│   └── styles/                 # tokens, base, panel, region, search, cache, toast
+├── tests/                      # Node built-in unit tests
+├── scripts/                    # build / artifact helpers
+├── steam-region-block-bypass.user.js   # Installable userscript (committed artifact)
+├── steam-region-block-bypass.meta.js   # Metadata companion for update checks
+├── proxy-gateway.mjs           # Optional local HTTP gateway (Node)
+├── package.json                # Dependencies, version, scripts
+├── README.md                   # Documentation and install instructions
+├── CHANGELOG.md                # Version history
+├── DESIGN.md                   # Visual language and CSS token rules
+├── LICENSE                     # MIT license
+└── .gitattributes / .gitignore
 ```
 
 | File | Purpose |
@@ -212,6 +230,8 @@ Built with **Vite** + **vite-plugin-monkey**. Edit ESM modules under [`src/`](sr
 npm install
 npm run dev      # live "dev:" userscript via Vite
 npm run build    # production → dist/ + root .user.js / .meta.js
+npm test         # Node built-in unit tests
+npm run ci       # tests + build + artifact verification
 npm run gateway  # optional local proxy gateway
 ```
 
@@ -232,14 +252,22 @@ Tampermonkey does not track local files natively. Options:
 
 ### Configuration
 
-Settings are stored in userscript storage (`srbb_settings`) via the header panel:
+Settings are stored in userscript storage (`srbb_settings_v2`; the flat `srbb_settings` v1 object is migrated once and left intact for downgrade) via the settings panel:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
+| Interface language | Auto | Panel / message language; `Auto` follows the browser. Steam's store-language cookie still wins for guest requests |
+| Enable region bypass | on | Gates page detection, auto/manual mode, banner, other-site button, and queue restore. Guest search keeps its own switches |
 | Bypass trigger | Auto | **Auto** runs on region-error pages; **Show button** waits for a manual offer |
+| Show banner | on | Show the region notice above a bypassed page |
 | Store country (`cc`) | empty | Optional Steam country code for guest requests |
 | Show toast notifications | on | Steam-style floating notices for setting changes; can be turned off |
 | Toast position | Top right | Corner for toasts: top/bottom × left/right |
+| Guest search suggestions | on | **Search** tab: anonymous header suggestions |
+| Guest `/search` page | off | **Search** tab: replace the live results with an anonymous guest fetch |
+| Remember blocked games | on | **Search** tab: save app IDs when Steam shows a region error |
+| Highlight blocked in search | on | **Search** tab: badge saved games in guest results |
+| Auto-detect blocked in search | on | **Search** tab: probe result pages with the signed-in session; scope and concurrency are configurable |
 | Cache duration (minutes) | `60` | **Cache** tab: reuse a successful guest page for this long; `0` disables cache. Banner **Reload** always fetches fresh |
 | Max cached pages | `30` | **Cache** tab: newest guest HTML entries kept (soft 10 MB meter budget) |
 | Cache app / search pages | on / on | **Cache** tab: which guest HTML kinds to store; off stops writes and prunes that kind |
@@ -247,6 +275,8 @@ Settings are stored in userscript storage (`srbb_settings`) via the header panel
 | Gateway mode | `gateway` | How the target URL is appended to `host:port` |
 | Host / Port | empty | Gateway address (e.g. `127.0.0.1` / `8765`) |
 | Username / Password | empty | Optional HTTP Basic auth for the gateway |
+
+Settings are written to `srbb_settings_v2`. The page cache keeps the existing `srbb_page_cache` key and the blocked registry keeps `srbb_blocked_apps`.
 
 ## Disclaimer
 

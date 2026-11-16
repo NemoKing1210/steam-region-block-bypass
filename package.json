@@ -1,6 +1,6 @@
 {
   "name": "steam-region-block-bypass",
-  "version": "1.19.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Violentmonkey/Tampermonkey userscript for Steam region-blocked app pages and optional guest search; includes optional local proxy gateway",
@@ -20,8 +20,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/copy-dist.mjs",
+    "test": "node --test",
     "verify:artifacts": "node scripts/verify-artifacts.mjs",
-    "ci": "npm run build && npm run verify:artifacts",
+    "ci": "npm test && npm run build && npm run verify:artifacts",
     "gateway": "node proxy-gateway.mjs",
     "preview": "vite preview"
   },

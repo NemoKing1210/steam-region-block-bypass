@@ -5,6 +5,53 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-11-16
+
+### Added
+
+- **Transplant-first injection**: guest page content is swapped into the live
+  document, preserving the logged-in header, session globals, styles, and
+  loaded scripts. `document.write` remains the full-document fallback.
+- **Signed-in queue restore** after a transplant: wishlist, follow, and ignore
+  controls are rebuilt in Steam-native markup and post through the live
+  session.
+- Tag-modal upgrade for signed-in sessions, Steam tag-fitting repair, and a
+  guaranteed app-stylesheet fallback after a transplant.
+- Nested v2 settings with a one-time migration from the flat v1 object
+  (`srbb_settings_v2`; v1 is left intact for downgrade).
+- UI language selector, region master switch, and show-banner toggle.
+- Home-list settings panel with General / Search / Cache / Proxy / About
+  pages, draft editing, Reset, Cancel, Save, and Save & reload.
+- `--srbb-*` design tokens, split stylesheets, [`DESIGN.md`](DESIGN.md), and
+  Node built-in unit tests wired into `npm run ci`.
+
+### Changed
+
+- Source reorganized into `core/`, `region/`, `features/search/`,
+  `features/settings/`, `ui/`, `utils/`, `i18n/locales/`, and feature CSS
+  files. There is no global mutable state bag; cross-feature reactions use
+  `core/bus.js`.
+- Settings persistence is separated from feature side effects. `settings:*`
+  events carry `{ previous, next }`, and the panel emits only changed
+  sections.
+- Search moved into `features/search/` with module-local state while keeping
+  the same endpoints, merge order, enrichment, DOM classes, keyboard flow,
+  probing, and cache behaviour.
+- The 1,867-line translation map was split into ten locale files with the same
+  flat keys; a parity test enforces key order and placeholders.
+- Docs, metadata, and root install artifacts are regenerated for `2.0.0`.
+
+### Fixed
+
+- Broken `state.searchPageLoading` translation key in the guest `/search`
+  status path.
+- Stale `DEVELOPMENT.md` statement that settings open from a header button;
+  the entry is the account dropdown, logged-out fallback, or manager command.
+- Signed-in probe URLs now include the guest language and country parameters,
+  matching the 1.x request behaviour.
+- Malformed blocked-app and page-cache entries are pruned on load.
+- Settings panel header/footer labels now refresh after a UI language change.
+
 ## [1.19.0] - 2026-08-02
 
 ### Added
