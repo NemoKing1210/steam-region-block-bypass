@@ -1,5 +1,7 @@
 # Steam Region Block Bypass
 
+**English** · [Русский](README.ru.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md) · [Português (Brasil)](README.pt-BR.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Polski](README.pl.md)
+
 [![Install userscript](https://img.shields.io/badge/Install-userscript-66c0f4?style=for-the-badge)](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/steam-region-block-bypass.user.js)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Version](https://img.shields.io/badge/version-2.0.0-green?style=for-the-badge)](CHANGELOG.md)
@@ -9,6 +11,21 @@ A userscript for the Steam store that restores **blocked product pages** and add
 It refetches app URLs **without account cookies** (guest view), transplants the real store layout into the live document, and restores signed-in wishlist/follow/ignore controls after a transplant. **Guest search suggestions** are on by default; the full **`/search` page** guest mode is off by default (enable in Region Bypass → Search). For IP-based locks, an optional **proxy gateway** can be configured from the Steam-styled settings panel (account menu → Region Bypass settings).
 
 Compatible with [Tampermonkey](https://www.tampermonkey.net/), [Violentmonkey](https://violentmonkey.github.io/), [Greasemonkey](https://www.greasespot.net/), ScriptCat, and other managers that support the `// ==UserScript==` metadata block.
+
+## Screenshots
+
+The real userscript running on a live Steam store page.
+
+![Region Bypass settings panel with General, Search, Cache, Proxy and About pages](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/settings-home.png)
+
+| | |
+|---|---|
+| ![General — interface language, bypass mode, store country, toast notifications](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/settings-general.png)<br>**General** — interface language, auto/manual bypass, banner, store country, toast notifications | ![Search — guest suggestions, opt-in /search page, blocked-games registry, probing](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/settings-search.png)<br>**Search** — guest suggestions, opt-in `/search` page, blocked-games registry, probing |
+| ![Cache — usage meter, TTL, entry limit, per-source caching, blocked list](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/settings-cache.png)<br>**Cache** — usage meter, TTL, entry limit, per-source caching, blocked list | ![Proxy gateway — URL mode, host/port, optional HTTP Basic credentials](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/settings-proxy.png)<br>**Proxy gateway** — URL mode, host/port, optional HTTP Basic credentials |
+
+Guest search suggestions in the store header — **Call of Duty: Modern Warfare 4** is flagged as **region blocked**, while other results remain available:
+
+![Guest search suggestions for Call of Duty: Modern Warfare 4 with a Region blocked badge](https://raw.githubusercontent.com/NemoKing1210/steam-region-block-bypass/main/docs/screenshots/guest-suggest-blocked.png)
 
 ## Quick install
 
@@ -79,7 +96,7 @@ Managers compare the installed `@version` with the remote metadata to decide whe
 | Steam Store (apps) | `https://store.steampowered.com/app/{id}/…` | Region-error bypass (main use case) |
 | Steam Store (search) | Header search + `https://store.steampowered.com/search/?term=…` | **Guest search suggestions** and optional **Guest /search page** in Region Bypass → Search |
 
-App pages work when Steam shows **“This item is currently unavailable in your region”**. **Guest search suggestions** are enabled by default for the header search bar. Guest refetch for the full `/search` page is **off by default** (same anonymous guest fetch stack: proxy / `cc` / cache) — turn it on in **Region Bypass → Search**. Saved region-blocked app IDs can be highlighted in search results.
+App pages work when Steam shows **“This item is currently unavailable in your region”** — for example, **Call of Duty: Modern Warfare 4** in restricted regions. **Guest search suggestions** are enabled by default for the header search bar. Guest refetch for the full `/search` page is **off by default** (same anonymous guest fetch stack: proxy / `cc` / cache) — turn it on in **Region Bypass → Search**. Saved region-blocked app IDs can be highlighted in search results.
 
 ## How it works
 

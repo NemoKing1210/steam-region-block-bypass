@@ -85,6 +85,13 @@ UI: settings entry in account dropdown `#account_dropdown` (logged-out fallback 
 - Production builds minify JS/CSS; edit `src/` for readable code.
 - **Always bump** `package.json` `version` when shipping user-visible changes.
 - **Keep README.md in sync** with features, settings, install flow, and architecture.
+  Translated READMEs (`README.ru.md`, `README.zh-CN.md`, `README.es.md`,
+  `README.pt-BR.md`, `README.de.md`, `README.fr.md`, `README.ja.md`,
+  `README.ko.md`, `README.pl.md`) must be updated in the same PR; keep the
+  language switcher and section structure aligned with `README.md`.
+- README screenshots live in `docs/screenshots/` and are embedded from
+  `raw.githubusercontent.com` URLs. Refresh them (and update every README's
+  captions) when the settings panel or guest search UI changes.
 - Gateway: ESM Node + `undici`; do not expand into a general-purpose proxy product unless asked.
 
 ## Commands

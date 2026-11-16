@@ -37,7 +37,7 @@ Edit source under `src/` (and `vite.config.js` for userscript metadata). Do **no
 5. For user-visible changes:
    - Bump `version` in `package.json` (SemVer: patch for fixes, minor for features)
    - Add a [Keep a Changelog](https://keepachangelog.com/) entry in `CHANGELOG.md`
-   - Update [README.md](README.md) if features, settings, install flow, or FAQ changed
+   - Update [README.md](README.md) if features, settings, install flow, or FAQ changed — and the corresponding `README.<locale>.md` translations
 
 ### What CI checks
 
